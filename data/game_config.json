@@ -1,0 +1,29 @@
+{
+  "rounds": 5,
+  "minigames_pool": 6,
+  "flight_input": "none",
+  "base_power": 100,
+  "max_power": 2700,
+  "grades": {
+    "PERFECT": 300,
+    "GREAT": 200,
+    "GOOD": 130,
+    "MISS": 50
+  },
+  "grade_thresholds": {
+    "PERFECT": 95,
+    "GREAT": 80,
+    "GOOD": 50
+  },
+  "combo_milestones": {
+    "2": 100,
+    "3": 200,
+    "4": 300,
+    "5": 500
+  },
+  "distance_formula": "round(10 ** (3 + 15.3 * (power - 350) / 2350))",
+  "distance_note": "Ver.2.1の round(0.1*P^2.4) から再調整。全MISS(350)=1,000km、全PERFECT(2700)=約2×10^18km(約21万光年・天の川銀河の向こう)",
+  "flight_seconds": 8,
+  "orientation": "portrait",
+  "target_aspect": "9:16"
+}

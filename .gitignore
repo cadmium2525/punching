@@ -1,0 +1,14 @@
+node_modules/
+dist/
+public/mediapipe/
+test-results/
+playwright-report/
+.env.local
+.firebase/
+*-debug.log
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.dev/
+dist-emulator/
+.firebaserc

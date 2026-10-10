@@ -1,0 +1,89 @@
+rules_version = '2';
+// ぶっ飛ばせ！ムカつくアイツ！ ランキング用ルール（Spark 無料プランで動く構成）
+// Cloud Functions を使わず、Rules 側で以下を検証する：
+//  - 匿名認証済みの本人のドキュメントにだけ書ける
+//  - 送信された5回の判定からパワーを再計算し、一致しないものは拒否
+//  - 日次ランキングの日付は日本時間（サーバー時刻）で決まり、改ざん不可
+//  - 自己ベストを更新するときだけ書ける
+//  - 10秒に1回までのレート制限（users/{uid}.lastSubmitAt を同じバッチで更新させる）
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isGrade(g) { return g in ['PERFECT', 'GREAT', 'GOOD', 'MISS']; }
+    function pts(g) { return g == 'PERFECT' ? 300 : (g == 'GREAT' ? 200 : (g == 'GOOD' ? 130 : 50)); }
+    function p(gr, i) { return gr[i] == 'PERFECT' ? 1 : 0; }
+    // i 番目のラウンド時点の PERFECT 連続数
+    function s0(gr) { return p(gr, 0); }
+    function s1(gr) { return p(gr, 1) * (s0(gr) + 1); }
+    function s2(gr) { return p(gr, 2) * (s1(gr) + 1); }
+    function s3(gr) { return p(gr, 3) * (s2(gr) + 1); }
+    function s4(gr) { return p(gr, 4) * (s3(gr) + 1); }
+    function bonus(s) { return s == 2 ? 100 : (s == 3 ? 200 : (s == 4 ? 300 : (s == 5 ? 500 : 0))); }
+    function powerOf(gr) {
+      return 100 + pts(gr[0]) + pts(gr[1]) + pts(gr[2]) + pts(gr[3]) + pts(gr[4])
+        + bonus(s0(gr)) + bonus(s1(gr)) + bonus(s2(gr)) + bonus(s3(gr)) + bonus(s4(gr));
+    }
+    function jstDay() {
+      let t = request.time + duration.value(9, 'h');
+      return t.year() * 10000 + t.month() * 100 + t.day();
+    }
+    function validNick(n) { return n is string && n.size() >= 1 && n.size() <= 12 && !n.matches('.*[<>].*'); }
+    function validEntry(d) {
+      return d.keys().hasOnly(['uid', 'day', 'nickname', 'power', 'grades', 'characterId', 'achievedAt'])
+        && d.keys().hasAll(['uid', 'day', 'nickname', 'power', 'grades', 'characterId', 'achievedAt'])
+        && d.uid == request.auth.uid
+        && d.day == jstDay()
+        && validNick(d.nickname)
+        && d.grades is list && d.grades.size() == 5
+        && isGrade(d.grades[0]) && isGrade(d.grades[1]) && isGrade(d.grades[2]) && isGrade(d.grades[3]) && isGrade(d.grades[4])
+        && d.power is int && d.power == powerOf(d.grades)
+        && d.characterId is string && d.characterId.matches('^(preset-(0[1-9]|10)|custom)$')
+        && d.achievedAt == request.time;
+    }
+    function bumpedRateLimit() {
+      return getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.lastSubmitAt == request.time;
+    }
+    function improves() { return resource == null || request.resource.data.power > resource.data.power; }
+    function nickOnly() {
+      return resource != null && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname'])
+        && validNick(request.resource.data.nickname);
+    }
+    function scoreWrite() { return validEntry(request.resource.data) && improves() && bumpedRateLimit(); }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nickname'])
+        && validNick(request.resource.data.nickname);
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nickname', 'lastSubmitAt'])
+        && validNick(request.resource.data.nickname)
+        && (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname'])
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSubmitAt'])
+            && request.resource.data.lastSubmitAt == request.time
+            && (!('lastSubmitAt' in resource.data) || request.time > resource.data.lastSubmitAt + duration.value(10, 's'))
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /daily/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && id == string(jstDay()) + '_' + request.auth.uid && (scoreWrite() || nickOnly());
+      allow delete: if false;
+    }
+
+    match /alltime/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && uid == request.auth.uid && (scoreWrite() || nickOnly());
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

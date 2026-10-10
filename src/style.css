@@ -1,0 +1,77 @@
+:root {
+  --bg: #0b1230;
+  --panel: #18214a;
+  --panel2: #222c5e;
+  --yellow: #ffd23f;
+  --gold: #ffb800;
+  --red: #e63946;
+  --cyan: #4cc9f0;
+  --text: #ffffff;
+  --muted: #a9b3d9;
+  --font-ui: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Noto Sans JP", "WenQuanYi Zen Hei", sans-serif;
+  --font-title: "Dela Gothic One", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "WenQuanYi Zen Hei", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+#game { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+#game canvas { touch-action: none; }
+#loading {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-size: 28px; color: var(--yellow); letter-spacing: 0.1em; pointer-events: none;
+}
+#loading.done { display: none; }
+
+/* DOM オーバーレイ（写真作成・ニックネーム・プライバシー） */
+#overlay {
+  position: fixed; inset: 0; z-index: 10; background: rgba(5, 8, 25, 0.82);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  touch-action: auto; -webkit-user-select: text; user-select: text;
+}
+#overlay[hidden] { display: none; }
+.ov-card {
+  width: min(440px, 100%); max-height: calc(100% - 16px); overflow-y: auto;
+  background: var(--panel); border: 2px solid #34407a; border-radius: 20px; padding: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.ov-card h2 { margin: 0 0 12px; font-family: var(--font-title); font-weight: 400; font-size: 22px; color: var(--yellow); }
+.ov-card p { margin: 8px 0; line-height: 1.6; font-size: 14px; color: var(--muted); }
+.ov-card p strong { color: var(--text); }
+.ov-card label { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.5; margin: 10px 0; }
+.ov-card input[type="checkbox"] { width: 22px; height: 22px; flex: none; accent-color: var(--yellow); margin-top: 2px; }
+.ov-card input[type="text"] {
+  width: 100%; font: inherit; font-size: 18px; padding: 12px 14px; border-radius: 12px;
+  border: 2px solid #3a4785; background: #0e1638; color: var(--text);
+}
+.ov-card input[type="range"] { width: 100%; accent-color: var(--yellow); }
+.ov-row { display: flex; gap: 10px; margin-top: 14px; }
+.ov-row > * { flex: 1; }
+.ov-btn {
+  font: inherit; font-weight: 800; font-size: 17px; min-height: 52px; border: 0; border-radius: 14px;
+  background: var(--panel2); color: var(--text); cursor: pointer; padding: 10px 14px;
+}
+.ov-btn.primary { background: var(--yellow); color: #1b1300; }
+.ov-btn.blue { background: #3da5ff; color: #04122a; }
+.ov-btn:disabled { opacity: 0.45; cursor: default; }
+.ov-btn.file { display: flex; align-items: center; justify-content: center; }
+.ov-btn.file input { display: none; }
+.ov-preview {
+  position: relative; width: 260px; height: 260px; margin: 12px auto; border-radius: 50%; overflow: hidden;
+  background: conic-gradient(#2a3466 25%, #1d2650 0 50%, #2a3466 0 75%, #1d2650 0) 0 0 / 24px 24px;
+  border: 4px solid var(--yellow); touch-action: none; cursor: grab;
+}
+.ov-preview canvas { width: 100%; height: 100%; display: block; }
+.ov-status { text-align: center; min-height: 1.5em; font-size: 14px; color: var(--cyan); }
+.ov-error { color: #ff8a8a; }
+.ov-slider { margin: 8px 0; font-size: 14px; color: var(--muted); }
