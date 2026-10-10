@@ -46,7 +46,10 @@ async function start() {
   window.addEventListener('keydown', unlock, { capture: true });
   document.getElementById('loading')?.classList.add('done');
   if (DEBUG.test) window.__pf = { game };
-  if (DEBUG.pv) window.__pv = { renderAudio: (await import('./audio/sfx.js')).renderPvAudio };
+  if (DEBUG.pv) {
+    const a = await import('./audio/sfx.js');
+    window.__pv = { renderAudio: a.renderPvAudio, log: a.pvLog };
+  }
 }
 
 start();

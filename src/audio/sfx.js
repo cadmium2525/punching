@@ -253,10 +253,11 @@ function _windStart() {
   f.frequency.value = 300;
   f.Q.value = 1.4;
   const g = ctx.createGain();
+  g.gain.value = 0.0001; // 鳴り始める前に既定値(1)のまま鳴らないように
   g.gain.setValueAtTime(0.0001, now());
   g.gain.exponentialRampToValueAtTime(0.08, now() + 0.3);
   s.connect(f).connect(g).connect(sfxBus);
-  s.start();
+  s.start(now());
   wind = { s, f, g };
 }
 function _windSet(intensity) {
@@ -372,13 +373,13 @@ export const bgmPlay = logged('bgmPlay', _bgmPlay);
 export const bgmStop = logged('bgmStop', _bgmStop);
 
 /** 記録した音を書き出す。from は記録の開始時刻(ms)。戻り値は WAV(base64) */
-export async function renderPvAudio(fromMs, durSec) {
+export async function renderPvAudio(fromMs, durSec, events = pvLog) {
   const sr = 44100;
   const oc = new OfflineAudioContext(2, Math.ceil(durSec * sr), sr);
   initGraph(oc);
   offline = true;
   wind = null;
-  const evs = pvLog.filter((e) => e.t >= fromMs - 1).map((e) => ({ ...e, s: (e.t - fromMs) / 1000 }));
+  const evs = events.filter((e) => e.t >= fromMs - 1).map((e) => ({ ...e, s: (e.t - fromMs) / 1000 }));
   // BGM の区間
   const segs = [];
   let cur = null;

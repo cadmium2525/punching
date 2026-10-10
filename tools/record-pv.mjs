@@ -56,6 +56,8 @@ while (n < 60 * FPS) {
 }
 const dur = n / FPS;
 console.log(`frames: ${n} (${dur.toFixed(2)}s), rendering audio…`);
+const log = await p.evaluate((s) => window.__pv.log.filter((e) => e.t >= s - 1).map((e) => ({ ...e, t: e.t - s })), startMs);
+writeFileSync(`${OUT}/log.json`, JSON.stringify(log));
 const wav = await p.evaluate(([s, d]) => window.__pv.renderAudio(s, d), [startMs, dur]);
 writeFileSync(`${OUT}/audio.wav`, Buffer.from(wav, 'base64'));
 await b.close();
