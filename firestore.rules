@@ -73,9 +73,10 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /daily/{id} {
+    // 日次ランキング：daily/{日本時間の日付}/scores/{uid}（インデックス作成不要の構成）
+    match /daily/{day}/scores/{uid} {
       allow read: if signedIn();
-      allow create, update: if signedIn() && id == string(jstDay()) + '_' + request.auth.uid && (scoreWrite() || nickOnly());
+      allow create, update: if signedIn() && uid == request.auth.uid && day == string(jstDay()) && (scoreWrite() || nickOnly());
       allow delete: if false;
     }
 

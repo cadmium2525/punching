@@ -40,7 +40,7 @@ function submit(uid, accs, { extra = {}, bump = true, dayId = jstDay(), targets 
   const d = db(uid);
   const b = writeBatch(d);
   if (bump) b.update(doc(d, 'users', uid), { lastSubmitAt: serverTimestamp() });
-  if (targets.includes('daily')) b.set(doc(d, 'daily', `${dayId}_${uid}`), entry(uid, accs, extra));
+  if (targets.includes('daily')) b.set(doc(d, 'daily', String(dayId), 'scores', uid), entry(uid, accs, extra));
   if (targets.includes('alltime')) b.set(doc(d, 'alltime', uid), entry(uid, accs, extra));
   return b.commit();
 }

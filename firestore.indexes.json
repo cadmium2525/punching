@@ -1,30 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "daily",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "day", "order": "ASCENDING" },
-        { "fieldPath": "power", "order": "DESCENDING" },
-        { "fieldPath": "achievedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "daily",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "day", "order": "ASCENDING" },
-        { "fieldPath": "power", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "alltime",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "power", "order": "DESCENDING" },
-        { "fieldPath": "achievedAt", "order": "ASCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

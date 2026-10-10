@@ -73,7 +73,7 @@ class FirebaseRanking {
     if (u.exists()) batch.update(userRef, { nickname });
     else batch.set(userRef, { nickname });
     const day = jstDay();
-    for (const ref of [F.doc(db, 'alltime', uid), F.doc(db, 'daily', `${day}_${uid}`)]) {
+    for (const ref of [F.doc(db, 'alltime', uid), F.doc(db, 'daily', String(day), 'scores', uid)]) {
       const s = await F.getDoc(ref);
       if (s.exists()) batch.update(ref, { nickname });
     }
@@ -91,7 +91,7 @@ class FirebaseRanking {
     if (!this.nickname) return null;
     const { F, db, uid } = this;
     const day = jstDay();
-    const dailyRef = F.doc(db, 'daily', `${day}_${uid}`);
+    const dailyRef = F.doc(db, 'daily', String(day), 'scores', uid);
     const allRef = F.doc(db, 'alltime', uid);
     const [d, a] = await Promise.all([F.getDoc(dailyRef), F.getDoc(allRef)]);
     const power = state.power;
@@ -118,7 +118,7 @@ class FirebaseRanking {
       }
     }
     const best = betterDaily ? power : d.data().power;
-    const dailyRank = await this._rankAbove(F.query(F.collection(db, 'daily'), F.where('day', '==', day), F.where('power', '>', best)));
+    const dailyRank = await this._rankAbove(F.query(F.collection(db, 'daily', String(day), 'scores'), F.where('power', '>', best)));
     return { dailyRank, improved: betterDaily || betterAll };
   }
 
@@ -132,10 +132,12 @@ class FirebaseRanking {
     const { F, db } = this;
     const q =
       kind === 'daily'
-        ? F.query(F.collection(db, 'daily'), F.where('day', '==', jstDay()), F.orderBy('power', 'desc'), F.orderBy('achievedAt', 'asc'), F.limit(n))
-        : F.query(F.collection(db, 'alltime'), F.orderBy('power', 'desc'), F.orderBy('achievedAt', 'asc'), F.limit(n));
+        ? F.query(F.collection(db, 'daily', String(jstDay()), 'scores'), F.orderBy('power', 'desc'), F.limit(n))
+        : F.query(F.collection(db, 'alltime'), F.orderBy('power', 'desc'), F.limit(n));
     const snap = await F.getDocs(q);
-    return snap.docs.map((s) => {
+    // 同点は先に達成した人が上（複合インデックス不要にするため並べ替えはここで）
+    const docs = snap.docs.slice().sort((a, b) => b.data().power - a.data().power || (a.data().achievedAt?.toMillis?.() ?? 0) - (b.data().achievedAt?.toMillis?.() ?? 0));
+    return docs.map((s) => {
       const v = s.data();
       return { nickname: v.nickname, power: v.power, km: distanceFromPower(v.power), characterId: v.characterId, isMe: v.uid === this.uid };
     });
@@ -145,11 +147,11 @@ class FirebaseRanking {
     await this.init();
     const { F, db, uid } = this;
     const day = jstDay();
-    const ref = kind === 'daily' ? F.doc(db, 'daily', `${day}_${uid}`) : F.doc(db, 'alltime', uid);
+    const ref = kind === 'daily' ? F.doc(db, 'daily', String(day), 'scores', uid) : F.doc(db, 'alltime', uid);
     const s = await F.getDoc(ref);
     if (!s.exists()) return null;
     const p = s.data().power;
-    const base = kind === 'daily' ? F.query(F.collection(db, 'daily'), F.where('day', '==', day), F.where('power', '>', p)) : F.query(F.collection(db, 'alltime'), F.where('power', '>', p));
+    const base = kind === 'daily' ? F.query(F.collection(db, 'daily', String(day), 'scores'), F.where('power', '>', p)) : F.query(F.collection(db, 'alltime'), F.where('power', '>', p));
     return { rank: await this._rankAbove(base), power: p, km: distanceFromPower(p) };
   }
 }

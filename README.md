@@ -54,21 +54,13 @@ Firebase を設定しなくても、端末内の自己ベストで普通に遊�
 1. [Firebase コンソール](https://console.firebase.google.com/) でプロジェクトを作成（**Spark プランのまま**でOK。Google アナリティクスは不要）
 2. **Authentication → Sign-in method → 匿名** を有効化
 3. **Firestore Database** を作成（本番モード、ロケーションは `asia-northeast1` など）
-4. **プロジェクトの設定 → マイアプリ → Web アプリを追加**して、表示された `apiKey` / `authDomain` / `projectId` / `appId` を控える
-5. Authentication → 設定 → **承認済みドメイン** に `<ユーザー名>.github.io` を追加
-6. ルールとインデックスをデプロイ：
-   ```bash
-   cp .firebaserc.example .firebaserc   # project id を書き換え
-   npx firebase login
-   npx firebase deploy --only firestore
-   ```
-7. GitHub リポジトリ → Settings → Secrets and variables → Actions → **Variables** に登録：
-   `FIREBASE_API_KEY` `FIREBASE_AUTH_DOMAIN` `FIREBASE_PROJECT_ID` `FIREBASE_APP_ID`
-   （Firebase の Web 設定は公開されても問題ない値です）
-8. （推奨）**App Check**：reCAPTCHA v3 のサイトキーを作り（無料）、App Check に登録して Firestore の適用を ON。サイトキーを Variables の `RECAPTCHA_SITE_KEY` に登録
-9. もう一度 push すると反映
+4. **Firestore Database → ルール** に [`firestore.rules`](firestore.rules) の中身をすべて貼り付けて「公開」
+5. **プロジェクトの設定 → マイアプリ → Web アプリを追加**して、表示された `firebaseConfig` の `apiKey` / `authDomain` / `projectId` / `appId` を [`src/ranking/firebase-config.js`](src/ranking/firebase-config.js) に書いて push
+   （Firebase の Web 設定はブラウザに配信される公開情報なので、リポジトリに書いて問題ありません）
+6. （推奨）**App Check**：reCAPTCHA v3 のサイトキーを作り（無料）、App Check に登録して Firestore の適用を ON。サイトキーを GitHub の Variables `RECAPTCHA_SITE_KEY` に登録
 
-ローカルで試すときは `.env.local` に `VITE_FIREBASE_API_KEY=...` などを書きます。
+インデックスの作成は不要です（複合インデックスを使わない作りにしています）。
+CLI を使う場合は `cp .firebaserc.example .firebaserc` → `npx firebase deploy --only firestore` でもルールを反映できます。
 
 ### 不正対策の範囲（正直なところ）
 
