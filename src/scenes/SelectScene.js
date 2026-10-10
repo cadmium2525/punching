@@ -14,14 +14,14 @@ export default class SelectScene extends Phaser.Scene {
     bgmPlay('calm');
     background(this);
     txt(this, W / 2, 70, 'ぶん殴る相手を選べ！', 48, { title: true, color: '#ffd23f', stroke: '#7a1010', strokeThickness: 10 });
-    txt(this, W / 2, 128, 'プリセット10人 ＋ 写真から作成', 24, { color: '#a9b3d9' });
+    txt(this, W / 2, 128, 'ムカつく4人 ＋ 写真から作成', 24, { color: '#a9b3d9' });
 
     this.selected = lastCharacterId() || allCharacters()[0].id;
 
     // 選択中キャラの大きな表示
     this.bigFace = null;
-    this.nameText = txt(this, W / 2 + 70, 245, '', 34, { title: true, origin: [0, 0.5] });
-    this.bubble = txt(this, W / 2 + 70, 320, '', 22, { color: '#1b1300', backgroundColor: '#ffffff', origin: [0, 0.5], wrap: 230, align: 'left', padding: { x: 14, y: 10 } });
+    this.nameText = txt(this, W / 2 + 40, 300, '', 34, { title: true, origin: [0, 0.5] });
+    this.bubble = txt(this, W / 2 + 40, 380, '', 22, { color: '#1b1300', backgroundColor: '#ffffff', origin: [0, 0.5], wrap: 260, align: 'left', padding: { x: 14, y: 10 } });
 
     this.grid = this.add.container(0, 0);
     this.buildGrid();
@@ -67,14 +67,14 @@ export default class SelectScene extends Phaser.Scene {
     const size = 150;
     const gap = 16;
     const x0 = W / 2 - ((cols - 1) * (size + gap)) / 2;
-    const y0 = 450;
+    const y0 = 620;
     chars.forEach((ch, i) => {
       const x = x0 + (i % cols) * (size + gap);
       const y = y0 + Math.floor(i / cols) * (size + 10);
       const card = this.add.container(x, y);
       const g = this.add.graphics();
       const img = this.add.image(0, -8, thumbKey(ch.id)).setDisplaySize(124, 124);
-      const label = txt(this, 0, 58, ch.custom ? '写真' : `NO.${ch.no}`, 18, { color: '#c8d0f0' });
+      const label = txt(this, 0, 58, ch.custom ? '写真' : ch.name, 17, { color: '#ffffff', stroke: '#0a0f2a', strokeThickness: 4, fit: 146 });
       card.add([g, img, label]);
       card.setSize(size, size).setInteractive({ useHandCursor: true });
       card.draw = (on) => {
@@ -116,7 +116,7 @@ export default class SelectScene extends Phaser.Scene {
     const ch = allCharacters().find((c) => c.id === id);
     if (!ch) return;
     this.bigFace?.destroy();
-    this.bigFace = addChar(this, id, { box: { x: W / 2 - 160, y: 285, w: 230, h: 270 } });
+    this.bigFace = addChar(this, id, { box: { x: W / 2 - 170, y: 345, w: 300, h: 380 } });
     this.nameText.setText(ch.name);
     this.bubble.setText('「' + tauntFor(id) + '」');
     if (fx) {

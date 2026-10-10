@@ -1,33 +1,30 @@
-// キャラクター（プリセット10体＋端末内の写真キャラ）
+// キャラクター（正式キャラ4人＋端末内の写真キャラ）
 import { charStore } from './storage/idb.js';
 
-const NAMES = ['ドヤ顔部長', 'マウント先輩', 'こぼし課長', 'チャラ男', '嫌味な同僚', '屁理屈メガネ', '大声ボス', 'ナメた後輩', 'あざと女子', 'グラサン社長', '煽りリーマン'];
+// 正式キャラクター4人（全身の立ち姿・透過WebP）
+const NAMES = ['煽りリーマン', 'パワハラ部長', 'ヒョウ柄のお局', '小悪魔ギャル'];
 const LINES = [
-  'え、まだそれやってんの？',
-  'オレの若い頃はさぁ〜',
-  'それ、オレが先に言ったよね？',
-  'ちょ、マジ無理なんだけどｗ',
-  'あ、それ聞いてないです〜',
-  'つまりキミの理解力の問題だね',
-  'なんで分からんのだァ！',
-  'え、先輩それダサくないっすか？',
-  'えー、わたしわかんなーい♡',
-  'キミの代わりはいくらでもいるよ',
   'ベロベロバ〜！悔しかったら殴ってみな！',
+  'オレに逆らうとはいい度胸だなァ！',
+  'ちょっとアンタ！なに見てんのよ！',
+  'ざぁこ♡ ざぁこ♡ 殴れるもんなら殴ってみな？',
 ];
 export const COMMON_TAUNTS = ['何見てんだよ！', 'やれるもんならやってみな？', 'ププッ、弱そう〜', 'かかってこいよ！', 'え、本気？ｗ'];
 
 // 顔の位置（トリミング後の画像に対する比率）と、顔の大きさ（高さに対する比率）
-const BUST = { fx: 0.5, fy: 0.45, face: 0.6 };
-const FACE_META = { 'preset-11': { fx: 0.583, fy: 0.092, face: 0.17 } };
+const BUST = { fx: 0.5, fy: 0.45, face: 0.6 }; // 写真キャラが胸上の場合
+const FACE_META = {
+  'preset-01': { fx: 0.583, fy: 0.092, face: 0.17 },
+  'preset-02': { fx: 0.626, fy: 0.088, face: 0.15 },
+  'preset-03': { fx: 0.507, fy: 0.126, face: 0.19 },
+  'preset-04': { fx: 0.49, fy: 0.18, face: 0.17 },
+};
 
-const PRESET_LIST = NAMES.map((name, i) => {
+export const PRESETS = NAMES.map((name, i) => {
   const n = String(i + 1).padStart(2, '0');
   const id = `preset-${n}`;
-  return { id, no: n, name, file: `assets/characters/character_${n}.webp`, line: LINES[i], custom: false, meta: FACE_META[id] || BUST };
+  return { id, no: n, name, file: `assets/characters/character_${n}.webp`, line: LINES[i], custom: false, meta: FACE_META[id] };
 });
-// 立ち姿のキャラを先頭に
-export const PRESETS = [PRESET_LIST[10], ...PRESET_LIST.slice(0, 10)];
 
 let customs = [];
 export const MAX_CUSTOM = 6;

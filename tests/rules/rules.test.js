@@ -81,6 +81,7 @@ describe('スコア送信', () => {
   it('余計なフィールド・写真データは拒否', async () => {
     await assertFails(submit('alice', P5, { extra: { photo: 'data:image/png;base64,AAAA' } }));
     await assertFails(submit('alice', P5, { extra: { characterId: 'custom-abc' } }));
+    await assertFails(submit('alice', P5, { extra: { characterId: 'preset-05' } }));
     await assertSucceeds(submit('alice', P5, { extra: { characterId: 'custom' } }));
   });
   it('達成時刻をクライアントが決めるのは拒否', () => assertFails(submit('alice', P5, { extra: { achievedAt: Timestamp.fromMillis(0) } })));

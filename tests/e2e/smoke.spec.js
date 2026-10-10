@@ -75,7 +75,7 @@ test('キャラ選択 → リトライが1秒以内', async ({ page }) => {
   await waitScene(page, 'Home');
   await clickNamed(page, 'Home', 'select');
   await waitScene(page, 'Select');
-  await clickNamed(page, 'Select', 'preset-07');
+  await clickNamed(page, 'Select', 'preset-03');
   await page.waitForTimeout(500);
   await snap(page, '02_select');
   await clickNamed(page, 'Select', 'play');
@@ -86,5 +86,5 @@ test('キャラ選択 → リトライが1秒以内', async ({ page }) => {
   await waitScene(page, 'MiniGame', 1000);
   expect(Date.now() - t0).toBeLessThan(1000);
   const ch = await page.evaluate(() => window.__pf.game.scene.getScene('MiniGame').state.characterId);
-  expect(ch).toBe('preset-07');
+  expect(ch).toBe('preset-03');
 });

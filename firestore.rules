@@ -40,7 +40,7 @@ service cloud.firestore {
         && d.accs is list && d.accs.size() == 5
         && isAcc(d.accs[0]) && isAcc(d.accs[1]) && isAcc(d.accs[2]) && isAcc(d.accs[3]) && isAcc(d.accs[4])
         && d.power is int && d.power == powerOf(d.accs)
-        && d.characterId is string && d.characterId.matches('^(preset-(0[1-9]|1[01])|custom)$')
+        && d.characterId is string && d.characterId.matches('^(preset-0[1-4]|custom)$')
         && d.achievedAt == request.time;
     }
     function bumpedRateLimit() {

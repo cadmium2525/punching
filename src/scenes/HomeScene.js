@@ -17,7 +17,7 @@ export default class HomeScene extends Phaser.Scene {
     // タイトル周りの爆発と、殴られ続けるアイツ
     const boom = this.add.image(W / 2, 400, 'boom').setScale(1.25).setAlpha(0.9);
     this.tweens.add({ targets: boom, angle: 360, duration: 30000, repeat: -1 });
-    const victim = Math.random() < 0.6 ? PRESETS[0] : PRESETS[Math.floor(Math.random() * PRESETS.length)];
+    const victim = PRESETS[Math.floor(Math.random() * PRESETS.length)];
     const face = addChar(this, victim.id, { box: { x: W / 2 + 50, y: 420, w: 420, h: 520 } });
     const F = face.base;
     const gHome = { x: F.x - 230, y: F.y + 110 };
