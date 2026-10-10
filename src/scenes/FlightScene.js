@@ -21,6 +21,8 @@ const BG_STOPS = [
   [12, 0x0d0420],
   [16, 0x160430],
   [18.5, 0x24073a],
+  [20, 0x07102e],
+  [21.6, 0x2a0a20],
 ];
 
 function bgColor(L) {
@@ -61,6 +63,7 @@ const SPRITES = {
   core: ['sun', 3.2, 0xffe2a8],
   galaxy: ['galaxy', 2.6],
   galaxy2: ['galaxy', 1.6, 0xaaccff],
+  cluster: ['galaxy', 1.1, 0xffc0f0],
 };
 
 export default class FlightScene extends Phaser.Scene {

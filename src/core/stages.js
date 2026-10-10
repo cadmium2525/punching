@@ -17,6 +17,9 @@ export const LANDMARKS = [
   { km: 2.46e17, id: 'center', name: '銀河系の中心', pass: '銀河系の中心を通過！', kind: 'core' },
   { km: 9.5e17, id: 'galaxy', name: '天の川銀河', pass: '天の川銀河を突破!!', kind: 'galaxy' },
   { km: 1.5e18, id: 'lmc', name: '大マゼラン雲', pass: '大マゼラン雲の向こうへ!!', kind: 'galaxy2' },
+  { km: 2.4e19, id: 'andromeda', name: 'アンドロメダ銀河', pass: 'アンドロメダ銀河を突破!!', kind: 'galaxy' },
+  { km: 5.4e20, id: 'virgo', name: 'おとめ座銀河団', pass: 'おとめ座銀河団を突き抜けた!!', kind: 'cluster' },
+  { km: 2.4e21, id: 'laniakea', name: 'ラニアケア超銀河団', pass: '超銀河団の果てへ!!!', kind: 'cluster' },
 ];
 
 /** 到達した通過ポイント（短距離では未到達エリアを含めない） */
@@ -26,9 +29,14 @@ export function reachedLandmarks(km) {
 
 /** 称号 */
 export function titleFor(km, godPunch) {
-  if (godPunch) return '銀河の向こうまでぶっ飛ばした神';
   const r = reachedLandmarks(km);
   const last = r[r.length - 1];
+  if (godPunch) {
+    if (last?.id === 'laniakea') return '宇宙の果てまでぶっ飛ばした神';
+    if (last?.id === 'virgo') return '銀河団の向こうまでぶっ飛ばした神';
+    if (last?.id === 'andromeda') return 'アンドロメダまでぶっ飛ばした神';
+    return '銀河の向こうまでぶっ飛ばした神';
+  }
   if (!last) return '地球からは出られなかった…';
   const map = {
     karman: '宇宙デビュー級',
@@ -48,6 +56,9 @@ export function titleFor(km, godPunch) {
     center: '銀河中心送り',
     galaxy: '銀河の向こうまで',
     lmc: '銀河の向こうまで',
+    andromeda: 'アンドロメダ送り',
+    virgo: '銀河団送り',
+    laniakea: '宇宙の果て送り',
   };
   return map[last.id];
 }

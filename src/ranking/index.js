@@ -103,7 +103,7 @@ class FirebaseRanking {
         day,
         nickname: this.nickname,
         power,
-        grades: state.grades,
+        accs: state.accs,
         characterId: state.characterId.startsWith('preset-') ? state.characterId : 'custom', // 写真は送らない
         achievedAt: F.serverTimestamp(),
       };

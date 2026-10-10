@@ -1,9 +1,9 @@
 // 1プレイ分のゲーム状態（仕様書 10章）
 import config from '../../data/game_config.json';
-import { applyRound, BASE_POWER, distanceFromPower, gradeOf, clampScore } from './scoring.js';
+import { applyRound, BASE_POWER, distanceFromPower, accOf } from './scoring.js';
 import { pickDistinct, randomId } from './rng.js';
 
-export const MINIGAME_IDS = ['justbar', 'stopring', 'mash', 'gauge', 'reaction', 'triple'];
+export const MINIGAME_IDS = ['justbar', 'stopring', 'mash', 'gauge', 'reaction', 'triple', 'stopwatch', 'rhythm', 'target', 'spin'];
 
 export class GameState {
   constructor(characterId, { rand = Math.random, miniGames } = {}) {
@@ -34,19 +34,21 @@ export class GameState {
    */
   commitRound(roundIndex, score, raw = null) {
     if (this.finished || roundIndex !== this.currentRound || this.rounds[roundIndex]) return null;
-    const s = clampScore(score);
-    const grade = gradeOf(s);
-    const r = applyRound(this, grade);
+    const acc = accOf(score);
+    const r = applyRound(this, acc);
+    const grade = r.grade;
     this.power = r.power;
     this.perfectStreak = r.perfectStreak;
     this.maxPerfectStreak = r.maxPerfectStreak;
     const result = {
       round: roundIndex,
       gameId: this.miniGames[roundIndex],
-      score: s,
+      acc,
       grade,
       gained: r.gained,
+      points: r.points,
       comboBonus: r.comboBonus,
+      precision: r.precision,
       streak: r.perfectStreak,
       raw,
     };
@@ -62,6 +64,10 @@ export class GameState {
     this.godPunch = this.rounds.length === config.rounds && this.rounds.every((r) => r.grade === 'PERFECT');
     // 飛行開始前に最終距離を確定（スキップしても不変）
     this.finalDistanceKm = distanceFromPower(this.power);
+  }
+
+  get accs() {
+    return this.rounds.map((r) => r.acc);
   }
 
   get grades() {

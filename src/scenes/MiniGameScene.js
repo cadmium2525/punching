@@ -2,11 +2,12 @@ import Phaser from 'phaser';
 import { W, H, C, txt, button, background, go, fadeIn, burst, shake, flash, popText, shockwave, eventTime, GRADE_STYLE } from '../ui.js';
 import { GameState } from '../core/state.js';
 import { createModel, MINIGAME_INFO } from '../minigames/models.js';
-import { createView } from '../minigames/views.js';
+import { createView, CX, CY } from '../minigames/views.js';
 import { addChar, tauntFor } from '../characters.js';
 import { sfx, bgmPlay } from '../audio/sfx.js';
 import { getFlag, setFlag } from '../settings.js';
 import { formatPower } from '../core/format.js';
+import { MAX_POWER } from '../core/scoring.js';
 import { DEBUG } from '../debug.js';
 
 
@@ -108,7 +109,7 @@ export default class MiniGameScene extends Phaser.Scene {
     this.pips[st.currentRound].setFillStyle(0x6c7bd1);
     this.tweens.add({ targets: this.pips[st.currentRound], scaleY: { from: 2, to: 1 }, duration: 200 });
 
-    this.model = createModel(id);
+    this.model = createModel(id, Math.random, st.currentRound);
     this.view = createView(id, this, this.model);
     this.botFired = 0;
     this.botPlan = this.makeBotPlan();
@@ -131,14 +132,14 @@ export default class MiniGameScene extends Phaser.Scene {
 
   makeBotPlan() {
     if (!DEBUG.bot || DEBUG.bot === 'miss') return [];
-    const times = this.model.botTimes();
-    if (DEBUG.bot === 'perfect') return times;
+    const ins = this.model.botInputs();
+    if (DEBUG.bot === 'perfect') return ins;
     if (DEBUG.bot === 'random') {
       const r = Math.random();
       if (r < 0.15) return [];
-      return times.map((t) => t + (r < 0.6 ? 0 : 90));
+      return ins.map((b) => ({ ...b, t: b.t + (r < 0.6 ? 0 : 90) }));
     }
-    return times;
+    return ins;
   }
 
   onPointer(p) {
@@ -148,7 +149,10 @@ export default class MiniGameScene extends Phaser.Scene {
 
   handleInput(t, pointerId, pointer) {
     if (!this.active || !this.model) return;
-    const res = this.model.input(t, pointerId);
+    // 位置を使うゲーム（動くアイツを狙え）のため、ゲーム領域の中心を原点にした座標も渡す
+    const lx = pointer ? pointer.x - CX : 0;
+    const ly = pointer ? pointer.y - CY : 0;
+    const res = this.model.input(t, pointerId, lx, ly);
     this.view.onInput(t, res, pointer);
     this.tweens.add({ targets: this.tapBtn, scale: { from: 0.93, to: 1 }, duration: 110 });
     if (this.model.done) this.endRound();
@@ -158,10 +162,10 @@ export default class MiniGameScene extends Phaser.Scene {
     if (!this.active || !this.model) return;
     const now = performance.now();
     // 自動プレイ（テスト用）
-    while (this.botPlan && this.botFired < this.botPlan.length && now - this.model.t0 >= this.botPlan[this.botFired]) {
-      const t = this.model.t0 + this.botPlan[this.botFired];
+    while (this.botPlan && this.botFired < this.botPlan.length && now - this.model.t0 >= this.botPlan[this.botFired].t) {
+      const b = this.botPlan[this.botFired];
       this.botFired++;
-      this.handleInput(t, this.botFired, { x: W / 2, y: 850 });
+      this.handleInput(this.model.t0 + b.t, this.botFired, { x: CX + (b.x ?? 0), y: CY + (b.y ?? 0) });
       if (!this.active) return;
     }
     this.model.update(now);
@@ -204,9 +208,17 @@ export default class MiniGameScene extends Phaser.Scene {
         depth: 600,
       });
       g.setAngle(-6);
+      if (r.acc >= 995) {
+        const j = popText(this, W / 2, 680, 'JUST!!', 90, { color: '#ffffff', stroke: '#ff4fa3', strokeThickness: 14, hold: 420, depth: 610, from: 3 });
+        j.setTint(0xff3b3b, 0xffe53b, 0x3da5ff, 0xc04bff);
+      }
       popText(this, W / 2, 920, `POWER +${r.gained}`, 52, { color: '#ffd23f', stroke: '#3b2300', strokeThickness: 10, hold: 380, depth: 600, from: 0.4 });
+      txt(this, W / 2, 965, `精度 ${(r.acc / 10).toFixed(1)}%${r.precision ? `  ボーナス +${r.precision}` : ''}`, 26, { color: '#7ee8ff', stroke: '#000000', strokeThickness: 5 })
+        .setDepth(600)
+        .setName('accText');
+      this.time.delayedCall(600, () => this.children.getByName('accText')?.destroy());
       if (r.comboBonus) {
-        popText(this, W / 2, 1010, `${r.streak}連続PERFECT! +${r.comboBonus}`, 44, { color: '#ff4fa3', stroke: '#2a0018', strokeThickness: 10, hold: 380, depth: 600 });
+        popText(this, W / 2, 1020, `${r.streak}連続PERFECT! +${r.comboBonus}`, 44, { color: '#ff4fa3', stroke: '#2a0018', strokeThickness: 10, hold: 380, depth: 600 });
         sfx.combo(r.streak);
       }
       if (perfect) {
@@ -248,7 +260,7 @@ export default class MiniGameScene extends Phaser.Scene {
   /** ラウンドが進むほど拳のチャージが強まる */
   chargeUp() {
     const lv = this.state.currentRound;
-    const p = this.state.power / 2700;
+    const p = this.state.power / MAX_POWER;
     this.glove.setScale(0.6 + lv * 0.06 + p * 0.2);
     this.aura.frequency = Math.max(20, 140 - lv * 25 - p * 60);
   }

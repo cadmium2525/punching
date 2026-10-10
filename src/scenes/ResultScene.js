@@ -18,7 +18,7 @@ export default class ResultScene extends Phaser.Scene {
     fadeIn(this, 120);
     bgmPlay('calm');
     const { isNew } = addRecord(state);
-    window.__pfResult = { power: state.power, km: state.finalDistanceKm, god: state.godPunch, grades: state.grades, isNew };
+    window.__pfResult = { power: state.power, km: state.finalDistanceKm, god: state.godPunch, grades: state.grades, accs: state.accs, isNew };
     background(this, { top: state.godPunch ? 0x4a2a00 : isNew ? 0x3a2a70 : 0x1b2660 });
 
     if (isNew) {
@@ -50,20 +50,22 @@ export default class ResultScene extends Phaser.Scene {
     const st = this.add.image(W / 2 + 70, 480, 'star').setScale(0.5).setTint(0xffd23f);
     this.tweens.add({ targets: st, angle: 360, repeat: -1, duration: 1200 });
 
-    panel(this, W / 2, 770, 620, 250);
+    panel(this, W / 2, 768, 620, 274);
+    const avg = state.accs.reduce((a, b) => a + b, 0) / state.accs.length / 10;
     const rows = [
       ['パンチパワー', formatPower(state.power)],
       ['PERFECT数', `${state.perfectCount} / 5`],
       ['最大コンボ', `${state.maxPerfectStreak}連続`],
+      ['平均精度', `${avg.toFixed(1)}%`],
       ['GOD PUNCH', state.godPunch ? 'はい！' : 'いいえ'],
     ];
     rows.forEach(([k, v], i) => {
-      const y = 672 + i * 46;
+      const y = 654 + i * 42;
       txt(this, 80, y, k, 28, { origin: [0, 0.5], color: '#c8d0f0' });
       txt(this, W - 80, y, v, 30, { origin: [1, 0.5], color: '#ffffff', title: true });
     });
-    txt(this, 80, 856, 'ランキング', 28, { origin: [0, 0.5], color: '#c8d0f0' });
-    this.rankText = txt(this, W - 80, 856, '…', 28, { origin: [1, 0.5], color: '#ffd23f', title: true });
+    txt(this, 80, 874, 'ランキング', 28, { origin: [0, 0.5], color: '#c8d0f0' });
+    this.rankText = txt(this, W - 80, 874, '…', 28, { origin: [1, 0.5], color: '#ffd23f', title: true });
 
     button(this, W / 2, 985, 600, 110, 'もう一度遊ぶ', {
       color: C.yellow,
@@ -87,7 +89,7 @@ export default class ResultScene extends Phaser.Scene {
     }
     if (!ranking.nickname) {
       this.rankText.setText('');
-      const b = button(this, W - 170, 856, 220, 50, '登録する', {
+      const b = button(this, W - 170, 874, 220, 50, '登録する', {
         size: 24,
         color: C.blue,
         textColor: '#04122a',

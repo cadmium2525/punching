@@ -137,6 +137,12 @@ export const sfx = {
     if (!ready()) return;
     osc('square', 1200 + p * 1600, ctx.currentTime, 0.03, 0.05);
   },
+  beat() {
+    if (!ready()) return;
+    const t = ctx.currentTime;
+    osc('sine', 110, t, 0.12, 0.6, { to: 50 });
+    osc('square', hz('E6'), t, 0.05, 0.08);
+  },
   timerWarn() {
     if (!ready()) return;
     osc('square', 1000, ctx.currentTime, 0.04, 0.06);

@@ -2,26 +2,29 @@ rules_version = '2';
 // ぶっ飛ばせ！ムカつくアイツ！ ランキング用ルール（Spark 無料プランで動く構成）
 // Cloud Functions を使わず、Rules 側で以下を検証する：
 //  - 匿名認証済みの本人のドキュメントにだけ書ける
-//  - 送信された5回の判定からパワーを再計算し、一致しないものは拒否
+//  - 送信された5回の精度からパワー（判定・コンボ・精度ボーナス）を再計算し、一致しないものは拒否
 //  - 日次ランキングの日付は日本時間（サーバー時刻）で決まり、改ざん不可
 //  - 自己ベストを更新するときだけ書ける
 //  - 10秒に1回までのレート制限（users/{uid}.lastSubmitAt を同じバッチで更新させる）
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function isGrade(g) { return g in ['PERFECT', 'GREAT', 'GOOD', 'MISS']; }
-    function pts(g) { return g == 'PERFECT' ? 300 : (g == 'GREAT' ? 200 : (g == 'GOOD' ? 130 : 50)); }
-    function p(gr, i) { return gr[i] == 'PERFECT' ? 1 : 0; }
+    // 精度(acc)は 0〜1000 の整数。判定：PERFECT ≥970 / GREAT ≥800 / GOOD ≥500 / MISS
+    function isAcc(a) { return a is int && a >= 0 && a <= 1000; }
+    function pts(a) { return a >= 970 ? 300 : (a >= 800 ? 200 : (a >= 500 ? 130 : 50)); }
+    function prec(a) { return a > 900 ? a - 900 : 0; }
+    function p(ac, i) { return ac[i] >= 970 ? 1 : 0; }
     // i 番目のラウンド時点の PERFECT 連続数
-    function s0(gr) { return p(gr, 0); }
-    function s1(gr) { return p(gr, 1) * (s0(gr) + 1); }
-    function s2(gr) { return p(gr, 2) * (s1(gr) + 1); }
-    function s3(gr) { return p(gr, 3) * (s2(gr) + 1); }
-    function s4(gr) { return p(gr, 4) * (s3(gr) + 1); }
+    function s0(ac) { return p(ac, 0); }
+    function s1(ac) { return p(ac, 1) * (s0(ac) + 1); }
+    function s2(ac) { return p(ac, 2) * (s1(ac) + 1); }
+    function s3(ac) { return p(ac, 3) * (s2(ac) + 1); }
+    function s4(ac) { return p(ac, 4) * (s3(ac) + 1); }
     function bonus(s) { return s == 2 ? 100 : (s == 3 ? 200 : (s == 4 ? 300 : (s == 5 ? 500 : 0))); }
-    function powerOf(gr) {
-      return 100 + pts(gr[0]) + pts(gr[1]) + pts(gr[2]) + pts(gr[3]) + pts(gr[4])
-        + bonus(s0(gr)) + bonus(s1(gr)) + bonus(s2(gr)) + bonus(s3(gr)) + bonus(s4(gr));
+    function powerOf(ac) {
+      return 100 + pts(ac[0]) + pts(ac[1]) + pts(ac[2]) + pts(ac[3]) + pts(ac[4])
+        + bonus(s0(ac)) + bonus(s1(ac)) + bonus(s2(ac)) + bonus(s3(ac)) + bonus(s4(ac))
+        + prec(ac[0]) + prec(ac[1]) + prec(ac[2]) + prec(ac[3]) + prec(ac[4]);
     }
     function jstDay() {
       let t = request.time + duration.value(9, 'h');
@@ -29,14 +32,14 @@ service cloud.firestore {
     }
     function validNick(n) { return n is string && n.size() >= 1 && n.size() <= 12 && !n.matches('.*[<>].*'); }
     function validEntry(d) {
-      return d.keys().hasOnly(['uid', 'day', 'nickname', 'power', 'grades', 'characterId', 'achievedAt'])
-        && d.keys().hasAll(['uid', 'day', 'nickname', 'power', 'grades', 'characterId', 'achievedAt'])
+      return d.keys().hasOnly(['uid', 'day', 'nickname', 'power', 'accs', 'characterId', 'achievedAt'])
+        && d.keys().hasAll(['uid', 'day', 'nickname', 'power', 'accs', 'characterId', 'achievedAt'])
         && d.uid == request.auth.uid
         && d.day == jstDay()
         && validNick(d.nickname)
-        && d.grades is list && d.grades.size() == 5
-        && isGrade(d.grades[0]) && isGrade(d.grades[1]) && isGrade(d.grades[2]) && isGrade(d.grades[3]) && isGrade(d.grades[4])
-        && d.power is int && d.power == powerOf(d.grades)
+        && d.accs is list && d.accs.size() == 5
+        && isAcc(d.accs[0]) && isAcc(d.accs[1]) && isAcc(d.accs[2]) && isAcc(d.accs[3]) && isAcc(d.accs[4])
+        && d.power is int && d.power == powerOf(d.accs)
         && d.characterId is string && d.characterId.matches('^(preset-(0[1-9]|1[01])|custom)$')
         && d.achievedAt == request.time;
     }

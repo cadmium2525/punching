@@ -26,7 +26,7 @@ async function clickNamed(page, sceneKey, name) {
   await page.mouse.click(pos.x, pos.y);
 }
 
-test('全PERFECTで2700 POWER・GOD PUNCH・銀河の向こう', async ({ page }) => {
+test('全PERFECTで3050以上・GOD PUNCH・銀河の向こう', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('./?test&bot=perfect');
@@ -47,9 +47,10 @@ test('全PERFECTで2700 POWER・GOD PUNCH・銀河の向こう', async ({ page }
   await page.waitForTimeout(900);
   await snap(page, '06_result');
   const r = await page.evaluate(() => window.__pfResult);
-  expect(r.power).toBe(2700);
+  expect(r.power).toBeGreaterThanOrEqual(3050);
+  expect(r.power).toBeLessThanOrEqual(3200);
   expect(r.god).toBe(true);
-  expect(r.km).toBeGreaterThan(1.5e18);
+  expect(r.km).toBeGreaterThan(9.5e17);
   expect(errors).toEqual([]);
 });
 

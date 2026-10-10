@@ -1,9 +1,9 @@
 {
   "rounds": 5,
-  "minigames_pool": 6,
+  "minigames_pool": 10,
   "flight_input": "none",
   "base_power": 100,
-  "max_power": 2700,
+  "max_power": 3200,
   "grades": {
     "PERFECT": 300,
     "GREAT": 200,
@@ -11,9 +11,9 @@
     "MISS": 50
   },
   "grade_thresholds": {
-    "PERFECT": 95,
-    "GREAT": 80,
-    "GOOD": 50
+    "PERFECT": 970,
+    "GREAT": 800,
+    "GOOD": 500
   },
   "combo_milestones": {
     "2": 100,
@@ -22,8 +22,10 @@
     "5": 500
   },
   "distance_formula": "round(10 ** (3 + 15.3 * (power - 350) / 2350))",
-  "distance_note": "Ver.2.1の round(0.1*P^2.4) から再調整。全MISS(350)=1,000km、全PERFECT(2700)=約2×10^18km(約21万光年・天の川銀河の向こう)",
+  "distance_note": "全MISS(350)=1,000km。全PERFECT(GOD PUNCH)は精度ボーナス込みで3050〜3200 POWER＝約4,000万〜3.8億光年。天の川銀河を突破できるのはGOD PUNCHだけ",
   "flight_seconds": 8,
   "orientation": "portrait",
-  "target_aspect": "9:16"
+  "target_aspect": "9:16",
+  "accuracy_scale": "精度は 0〜1000（スコア0〜100を0.1刻み）",
+  "precision_bonus": "各ラウンド max(0, 精度 - 900)。全ラウンド合計で最大 +500"
 }

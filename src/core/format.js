@@ -1,6 +1,7 @@
 const LY_KM = 9.4607e12;
 
 const UNITS = [
+  [1e20, '垓'],
   [1e16, '京'],
   [1e12, '兆'],
   [1e8, '億'],
@@ -26,7 +27,8 @@ export function formatLightYears(km) {
   if (ly < 0.01) return null;
   if (ly < 10) return `約${ly.toFixed(2)}光年`;
   if (ly < 10000) return `約${Math.round(ly).toLocaleString('ja-JP')}光年`;
-  return `約${(ly / 10000).toLocaleString('ja-JP', { maximumFractionDigits: 1 })}万光年`;
+  if (ly < 1e8) return `約${(ly / 10000).toLocaleString('ja-JP', { maximumFractionDigits: 1 })}万光年`;
+  return `約${(ly / 1e8).toLocaleString('ja-JP', { maximumFractionDigits: 2 })}億光年`;
 }
 
 export function formatPower(p) {
