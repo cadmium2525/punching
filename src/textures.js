@@ -368,6 +368,30 @@ export function makeTextures(scene) {
     x.fill();
     add(scene, 'satellite', c);
   }
+  // 虹のアーチ
+  {
+    const [c, x] = canvas(720, 380);
+    const cols = ['#ff3b3b', '#ff9a1a', '#ffe53b', '#3ddc84', '#3da5ff', '#5b5bff', '#c04bff'];
+    x.lineWidth = 26;
+    cols.forEach((col, i) => {
+      x.strokeStyle = col;
+      x.globalAlpha = 0.85;
+      x.beginPath();
+      x.arc(360, 380, 340 - i * 24, Math.PI, 0);
+      x.stroke();
+    });
+    add(scene, 'rainbowArc', c);
+  }
+  // 虹のオーロラ（縦に流すタイル）
+  {
+    const [c, x] = canvas(64, 512);
+    const g = x.createLinearGradient(0, 0, 0, 512);
+    const cols = ['#ff3b3b', '#ff9a1a', '#ffe53b', '#3ddc84', '#3da5ff', '#5b5bff', '#c04bff', '#ff3b3b'];
+    cols.forEach((col, i) => g.addColorStop(i / (cols.length - 1), col));
+    x.fillStyle = g;
+    x.fillRect(0, 0, 64, 512);
+    add(scene, 'rainbowBand', c);
+  }
   // 街並み
   {
     const [c, x] = canvas(720, 320);

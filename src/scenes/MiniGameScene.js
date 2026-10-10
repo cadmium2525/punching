@@ -3,13 +3,12 @@ import { W, H, C, txt, button, background, go, fadeIn, burst, shake, flash, popT
 import { GameState } from '../core/state.js';
 import { createModel, MINIGAME_INFO } from '../minigames/models.js';
 import { createView } from '../minigames/views.js';
-import { faceKey, tauntFor } from '../characters.js';
+import { addChar, tauntFor } from '../characters.js';
 import { sfx, bgmPlay } from '../audio/sfx.js';
 import { getFlag, setFlag } from '../settings.js';
 import { formatPower } from '../core/format.js';
 import { DEBUG } from '../debug.js';
 
-const FACE = { x: 330, y: 330, s: 0.72 };
 
 export default class MiniGameScene extends Phaser.Scene {
   constructor() {
@@ -38,8 +37,12 @@ export default class MiniGameScene extends Phaser.Scene {
     }
 
     // 相手（ムカつくアイツ）と拳
-    this.faceShadow = this.add.ellipse(FACE.x, FACE.y + 150, 220, 40, 0x000000, 0.35);
-    this.face = this.add.image(FACE.x, FACE.y, faceKey(characterId)).setScale(FACE.s);
+    this.faceShadow = this.add.ellipse(320, 560, 220, 36, 0x000000, 0.35);
+    this.face = addChar(this, characterId, { box: { x: 320, y: 360, w: 380, h: 390 } });
+    this.F = this.face.base;
+    this.faceShadow.setY(Math.min(575, this.face.footY()));
+    // 挑発のゆらゆら
+    this.idle = this.tweens.add({ targets: this.face, angle: { from: -2.5, to: 2.5 }, yoyo: true, repeat: -1, duration: 420, ease: 'Sine.InOut' });
     this.bubble = txt(this, 560, 190, '', 24, { color: '#1b1300', backgroundColor: '#ffffff', wrap: 230, padding: { x: 14, y: 10 } }).setAlpha(0);
     this.aura = this.add.particles(0, 0, 'spark', {
       speed: { min: 20, max: 80 },
@@ -81,8 +84,8 @@ export default class MiniGameScene extends Phaser.Scene {
 
   /** 対戦開始（約1秒）：アイツが挑発 */
   intro() {
-    this.face.setScale(FACE.s * 2.2).setAlpha(0);
-    this.tweens.add({ targets: this.face, scale: FACE.s, alpha: 1, duration: 260, ease: 'Back.Out' });
+    this.face.setScale(this.F.s * 2.2).setAlpha(0);
+    this.tweens.add({ targets: this.face, scale: this.F.s, alpha: 1, duration: 260, ease: 'Back.Out' });
     sfx.vs();
     this.say(tauntFor(this.state.characterId), 900);
     const vs = popText(this, W / 2, 780, 'FIGHT!', 150, { color: '#ffd23f', stroke: '#c1121f', strokeThickness: 18, hold: 380, from: 3 });
@@ -252,6 +255,7 @@ export default class MiniGameScene extends Phaser.Scene {
 
   /** 拳でアイツを殴る（判定に応じた強さ） */
   punchFace(grade) {
+    const FACE = this.F;
     const power = { PERFECT: 1, GREAT: 0.7, GOOD: 0.45, MISS: 0 }[grade];
     if (power === 0) {
       // 空振り：アイツが煽る
@@ -273,14 +277,14 @@ export default class MiniGameScene extends Phaser.Scene {
         this.face.setTint(0xff9999);
         this.tweens.add({
           targets: this.face,
-          scaleX: FACE.s * (1 - 0.3 * power),
-          scaleY: FACE.s * (1 + 0.15 * power),
+          scaleX: FACE.s * (1 + 0.25 * power),
+          scaleY: FACE.s * (1 - 0.18 * power),
           angle: -18 * power,
           x: FACE.x - 50 * power,
           duration: 70,
           yoyo: true,
           ease: 'Quad.Out',
-          onComplete: () => this.face.clearTint().setAngle(0).setPosition(FACE.x, FACE.y),
+          onComplete: () => this.face.clearTint().setAngle(0).setPosition(FACE.x, FACE.y).setScale(FACE.s),
         });
         this.tweens.add({ targets: this.glove, x: this.gloveHome.x, y: this.gloveHome.y, duration: 260, delay: 60, ease: 'Quad.Out' });
         if (power >= 0.7) shake(this, 100, 0.008 * power);
@@ -289,6 +293,7 @@ export default class MiniGameScene extends Phaser.Scene {
   }
 
   smallHit(count) {
+    const FACE = this.F;
     const f = this.face;
     f.setPosition(FACE.x + Phaser.Math.Between(-12, 12), FACE.y + Phaser.Math.Between(-8, 8));
     f.setAngle(Phaser.Math.Between(-8, 8));

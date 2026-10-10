@@ -67,7 +67,7 @@ html, body {
 .ov-btn.file { display: flex; align-items: center; justify-content: center; }
 .ov-btn.file input { display: none; }
 .ov-preview {
-  position: relative; width: 260px; height: 260px; margin: 12px auto; border-radius: 50%; overflow: hidden;
+  position: relative; width: 200px; height: 300px; margin: 12px auto; border-radius: 16px; overflow: hidden;
   background: conic-gradient(#2a3466 25%, #1d2650 0 50%, #2a3466 0 75%, #1d2650 0) 0 0 / 24px 24px;
   border: 4px solid var(--yellow); touch-action: none; cursor: grab;
 }

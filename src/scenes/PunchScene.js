@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { W, H, C, txt, go, fadeIn, burst, shake, flash, popText, shockwave } from '../ui.js';
-import { faceKey } from '../characters.js';
+import { addChar } from '../characters.js';
 import { sfx, bgmStop } from '../audio/sfx.js';
 import { formatPower } from '../core/format.js';
 import { DEBUG } from '../debug.js';
@@ -28,7 +28,9 @@ export default class PunchScene extends Phaser.Scene {
     }
     this.tweens.add({ targets: rays, angle: 30, duration: 2000 });
 
-    const face = this.add.image(W / 2, 480, faceKey(state.characterId)).setScale(1.15);
+    // 上半身アップ（顔を画面中央に）
+    const face = addChar(this, state.characterId, { face: { x: W / 2, y: 480, size: 250 } });
+    this.base = face.base;
     this.tweens.add({ targets: face, x: W / 2 + 6, duration: 40, yoyo: true, repeat: -1 });
 
     const powerText = txt(this, W / 2, 150, `${formatPower(state.power)} POWER`, 72, { title: true, color: '#ffd23f', stroke: '#5a0000', strokeThickness: 14 });
@@ -117,12 +119,13 @@ export default class PunchScene extends Phaser.Scene {
 
     // ヒットストップ → 顔が潰れて吹っ飛ぶ
     this.tweens.killTweensOf(face);
-    face.setScale(1.6, 0.75).setTint(0xff8888).setDepth(12);
+    const s0 = this.base.s;
+    face.setScale(s0 * 1.45, s0 * 0.7).setTint(0xff8888).setDepth(12);
     glove.setDepth(13);
     this.time.delayedCall(150, () => {
       face.clearTint();
       this.tweens.add({ targets: glove, x: W / 2 + 230, y: 380, angle: -40, scale: 1.3, duration: 160, ease: 'Quad.Out' });
-      this.tweens.add({ targets: face, x: W / 2 + 120, y: -300, scale: 0.4, angle: 720, duration: 520 * k, ease: 'Quad.In' });
+      this.tweens.add({ targets: face, x: W / 2 + 120, y: -300, scale: s0 * 0.35, angle: 720, duration: 520 * k, ease: 'Quad.In' });
       sfx.whoosh(0.5);
     });
     this.time.delayedCall(god ? 750 * k : 650 * k, () => go(this, 'Flight', { state: this.state }, 100));

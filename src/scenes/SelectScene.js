@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { W, H, C, txt, button, background, go, fadeIn, burst } from '../ui.js';
-import { allCharacters, customCharacters, faceKey, lastCharacterId, setLastCharacterId, tauntFor, MAX_CUSTOM, deleteCustomCharacter } from '../characters.js';
+import { allCharacters, customCharacters, addChar, thumbKey, lastCharacterId, setLastCharacterId, tauntFor, MAX_CUSTOM, deleteCustomCharacter } from '../characters.js';
 import { openPhotoEditor } from '../photo/editor.js';
 import { bgmPlay } from '../audio/sfx.js';
 import { sfx } from '../audio/sfx.js';
@@ -19,7 +19,7 @@ export default class SelectScene extends Phaser.Scene {
     this.selected = lastCharacterId() || allCharacters()[0].id;
 
     // 選択中キャラの大きな表示
-    this.bigFace = this.add.image(W / 2 - 150, 290, faceKey(this.selected)).setScale(0.5);
+    this.bigFace = null;
     this.nameText = txt(this, W / 2 + 70, 245, '', 34, { title: true, origin: [0, 0.5] });
     this.bubble = txt(this, W / 2 + 70, 320, '', 22, { color: '#1b1300', backgroundColor: '#ffffff', origin: [0, 0.5], wrap: 230, align: 'left', padding: { x: 14, y: 10 } });
 
@@ -73,7 +73,7 @@ export default class SelectScene extends Phaser.Scene {
       const y = y0 + Math.floor(i / cols) * (size + 10);
       const card = this.add.container(x, y);
       const g = this.add.graphics();
-      const img = this.add.image(0, -8, faceKey(ch.id)).setScale(0.36);
+      const img = this.add.image(0, -8, thumbKey(ch.id)).setDisplaySize(124, 124);
       const label = txt(this, 0, 58, ch.custom ? '写真' : `NO.${ch.no}`, 18, { color: '#c8d0f0' });
       card.add([g, img, label]);
       card.setSize(size, size).setInteractive({ useHandCursor: true });
@@ -115,12 +115,14 @@ export default class SelectScene extends Phaser.Scene {
     card?.draw(true);
     const ch = allCharacters().find((c) => c.id === id);
     if (!ch) return;
-    this.bigFace.setTexture(faceKey(id));
+    this.bigFace?.destroy();
+    this.bigFace = addChar(this, id, { box: { x: W / 2 - 160, y: 285, w: 230, h: 270 } });
     this.nameText.setText(ch.name);
     this.bubble.setText('「' + tauntFor(id) + '」');
     if (fx) {
       sfx.jab(0.6);
-      this.tweens.add({ targets: this.bigFace, scale: { from: 0.62, to: 0.5 }, duration: 260, ease: 'Back.Out' });
+      const s = this.bigFace.base.s;
+      this.tweens.add({ targets: this.bigFace, scale: { from: s * 1.25, to: s }, duration: 260, ease: 'Back.Out' });
       if (card) {
         this.tweens.add({ targets: card, scale: { from: 1.12, to: 1 }, duration: 200, ease: 'Back.Out' });
         burst(this, card.x, card.y, { count: 10, tint: [0xffd23f], speed: [100, 300], life: 400 });

@@ -4,7 +4,8 @@ import { personMask } from './segment.js';
 import { saveCustomCharacter } from '../characters.js';
 
 const MAX_SRC = 768;
-const OUT = 512;
+const OUT_W = 512;
+const OUT_H = 768;
 const TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 export function openPhotoEditor(scene, done) {
@@ -25,8 +26,8 @@ export function openPhotoEditor(scene, done) {
       </div>
       <div class="ov-status" id="pe-st"></div>
       <div id="pe-edit" hidden>
-        <div class="ov-preview" id="pe-prev"><canvas id="pe-canvas" width="${OUT}" height="${OUT}"></canvas></div>
-        <p style="text-align:center;margin-top:0">ドラッグで位置調整</p>
+        <div class="ov-preview" id="pe-prev"><canvas id="pe-canvas" width="${OUT_W}" height="${OUT_H}"></canvas></div>
+        <p style="text-align:center;margin-top:0">ドラッグで位置調整（全身が写った写真だと、立ち姿でぶっ飛びます）</p>
         <div class="ov-slider">大きさ<input type="range" id="pe-zoom" min="0.3" max="4" step="0.01" value="1" /></div>
         <div class="ov-slider">切り抜きの強さ<input type="range" id="pe-th" min="0.1" max="0.9" step="0.01" value="0.5" /></div>
         <label><input type="checkbox" id="pe-keep" /> 背景を残す（うまく切り抜けないとき）</label>
@@ -82,7 +83,8 @@ export function openPhotoEditor(scene, done) {
     try {
       ed.mask = await personMask(ed.src);
       rebuildCut();
-      fitTo(ed, maskBox(ed.mask, ed.src.width, ed.src.height));
+      ed.box = maskBox(ed.mask, ed.src.width, ed.src.height);
+      fitTo(ed, ed.box);
       draw();
       status('できた！位置と大きさを調整してね');
     } catch (err) {
@@ -107,9 +109,8 @@ export function openPhotoEditor(scene, done) {
 
   $('pe-zoom').oninput = (e) => {
     const z = +e.target.value;
-    const c = OUT / 2;
-    ed.x = c - ((c - ed.x) * z) / ed.zoom;
-    ed.y = c - ((c - ed.y) * z) / ed.zoom;
+    ed.x = OUT_W / 2 - ((OUT_W / 2 - ed.x) * z) / ed.zoom;
+    ed.y = OUT_H / 2 - ((OUT_H / 2 - ed.y) * z) / ed.zoom;
     ed.zoom = z;
     draw();
   };
@@ -132,7 +133,7 @@ export function openPhotoEditor(scene, done) {
   };
   prev.onpointermove = (e) => {
     if (!drag) return;
-    const k = OUT / prev.clientWidth;
+    const k = OUT_W / prev.clientWidth;
     ed.x = drag.ox + (e.clientX - drag.x) * k;
     ed.y = drag.oy + (e.clientY - drag.y) * k;
     draw();
@@ -145,11 +146,12 @@ export function openPhotoEditor(scene, done) {
     status('保存中…');
     try {
       const out = document.createElement('canvas');
-      out.width = out.height = OUT;
-      renderTo(out.getContext('2d'), ed, true);
+      out.width = OUT_W;
+      out.height = OUT_H;
+      renderTo(out.getContext('2d'), ed);
       const blob = await new Promise((r) => out.toBlob(r, 'image/png'));
       const name = ($('pe-name').value || 'ムカつくアイツ').replace(/[<>]/g, '').slice(0, 10);
-      const id = await saveCustomCharacter(scene, { name, blob });
+      const id = await saveCustomCharacter(scene, { name, blob, meta: ed.keep ? metaForKeep(ed) : null });
       close(id);
     } catch (err) {
       console.warn(err);
@@ -159,6 +161,21 @@ export function openPhotoEditor(scene, done) {
   };
   // ズームスライダーの値を ed に合わせる
   ed.onFit = () => ($('pe-zoom').value = String(ed.zoom));
+}
+
+/** 背景を残した場合は画像全体が不透明なので、人物の位置から顔の位置を決めておく */
+function metaForKeep(ed) {
+  if (!ed.box) return null;
+  const bx = ed.x + ed.box.x * ed.zoom;
+  const by = ed.y + ed.box.y * ed.zoom;
+  const bw = ed.box.w * ed.zoom;
+  const bh = ed.box.h * ed.zoom;
+  const full = bh / bw >= 1.3;
+  return {
+    fx: Math.min(1, Math.max(0, (bx + bw / 2) / OUT_W)),
+    fy: Math.min(1, Math.max(0, (by + bh * (full ? 0.09 : 0.45)) / OUT_H)),
+    face: (bh * (full ? 0.16 : 0.6)) / OUT_H,
+  };
 }
 
 function fileToCanvas(file) {
@@ -224,35 +241,25 @@ function maskBox(mask, w, h) {
   return { x: x0 * kx, y: y0 * ky, w: (x1 - x0) * kx, h: (y1 - y0) * ky };
 }
 
-/** 人物の上半分（顔のあたり）が円に収まるように合わせる */
+/** 切り抜いた人物の全身が枠に収まるように合わせる */
 function fitTo(ed, box) {
   const { width: w, height: h } = ed.src;
   if (box) {
-    const focusH = Math.min(box.h, box.w * 1.3);
-    ed.zoom = (OUT * 0.85) / Math.max(focusH, box.w);
-    const cx = box.x + box.w / 2;
-    const cy = box.y + focusH / 2;
-    ed.x = OUT / 2 - cx * ed.zoom;
-    ed.y = OUT / 2 - cy * ed.zoom;
+    ed.zoom = Math.min((OUT_W * 0.92) / box.w, (OUT_H * 0.94) / box.h);
+    ed.x = OUT_W / 2 - (box.x + box.w / 2) * ed.zoom;
+    ed.y = OUT_H / 2 - (box.y + box.h / 2) * ed.zoom;
   } else {
-    ed.zoom = OUT / Math.min(w, h);
-    ed.x = (OUT - w * ed.zoom) / 2;
-    ed.y = (OUT - h * ed.zoom) / 2;
+    ed.zoom = Math.min(OUT_W / w, OUT_H / h);
+    ed.x = (OUT_W - w * ed.zoom) / 2;
+    ed.y = (OUT_H - h * ed.zoom) / 2;
   }
   ed.zoom = Math.max(0.3, Math.min(4, ed.zoom));
   ed.onFit?.();
 }
 
-function renderTo(ctx, ed, final = false) {
-  ctx.clearRect(0, 0, OUT, OUT);
+function renderTo(ctx, ed) {
+  ctx.clearRect(0, 0, OUT_W, OUT_H);
   if (!ed.src) return;
   const img = ed.keep || !ed.cut ? ed.src : ed.cut;
-  ctx.save();
-  if (final) {
-    ctx.beginPath();
-    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
-    ctx.clip();
-  }
   ctx.drawImage(img, ed.x, ed.y, ed.src.width * ed.zoom, ed.src.height * ed.zoom);
-  ctx.restore();
 }

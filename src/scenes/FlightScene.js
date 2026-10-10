@@ -1,10 +1,14 @@
 import Phaser from 'phaser';
 import { W, H, C, txt, go, fadeIn, burst, shake, flash, popText, shockwave } from '../ui.js';
-import { faceKey } from '../characters.js';
+import { addChar } from '../characters.js';
 import { sfx, windStart, windSet, windStop } from '../audio/sfx.js';
 import { formatKm, formatLightYears } from '../core/format.js';
 import { flightLogKm, flightKm, reachedLandmarks } from '../core/stages.js';
 import { DEBUG } from '../debug.js';
+import { settings } from '../settings.js';
+
+export const RAINBOW = [0xff3b3b, 0xff9a1a, 0xffe53b, 0x3ddc84, 0x3da5ff, 0x5b5bff, 0xc04bff];
+const hue = (h) => Phaser.Display.Color.HSVToRGB(((h % 1) + 1) % 1, 0.85, 1).color;
 
 const DURATION = 8;
 const CHAR_Y = 640;
@@ -82,10 +86,14 @@ export default class FlightScene extends Phaser.Scene {
     for (let i = 0; i < 130; i++) {
       const s = this.add.image(Phaser.Math.Between(0, W), Phaser.Math.Between(0, H), 'dot').setAlpha(0);
       s.base = Phaser.Math.FloatBetween(0.4, 1);
+      if (i % 2 === 0) s.setTint(RAINBOW[i % RAINBOW.length]);
       s.setScale(Phaser.Math.FloatBetween(0.4, 1.2));
       this.stars.push(s);
     }
     this.deep = this.add.image(W / 2, H / 2, 'nebula').setScale(3).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD);
+    // 虹のオーロラ
+    this.aurora = this.add.tileSprite(W / 2, H / 2, W, H, 'rainbowBand').setAlpha(0).setBlendMode(Phaser.BlendModes.ADD).setTileScale(W / 64, 1.2);
+    this.rainbowGain = settings.reduceFlash ? 0.45 : 1;
 
     // 地上
     this.ground = this.add.container(0, 0);
@@ -102,6 +110,8 @@ export default class FlightScene extends Phaser.Scene {
       this.clouds.push(c);
     }
     this.earth = this.add.image(W / 2, H + 2000, 'earth').setScale(4.5).setVisible(false);
+    // 雲を抜けると虹のアーチをくぐる
+    this.arc = this.add.image(W / 2, -300, 'rainbowArc').setScale(1.3).setAlpha(0.9);
 
     // 通過ポイント
     const reached = reachedLandmarks(this.fin);
@@ -112,6 +122,9 @@ export default class FlightScene extends Phaser.Scene {
       m.win = Phaser.Math.Clamp(Math.min(m.tc - prev, next - m.tc) * 1.6, 0.3, 0.7);
     });
 
+    // アイツの後ろに伸びる虹の帯
+    this.ribbon = this.add.graphics();
+    this.hist = [];
     // アイツ
     this.trail = this.add.particles(0, 0, 'spark', {
       speed: { min: 60, max: 180 },
@@ -119,14 +132,17 @@ export default class FlightScene extends Phaser.Scene {
       scale: { start: 1.1, end: 0 },
       lifespan: 600,
       frequency: 16,
-      tint: this.god ? [0xffd23f, 0xff4fa3, 0x4cc9f0, 0x3ddc84] : [0xffd23f, 0xff7a1a, 0xe63946],
+      tint: RAINBOW,
       blendMode: 'ADD',
     });
-    this.face = this.add.image(W / 2, CHAR_Y, faceKey(state.characterId)).setScale(0.55);
+    // 全身をくるくる回しながら飛ばす（回転の中心は体の真ん中）
+    this.face = addChar(this, state.characterId, { box: { x: W / 2, y: CHAR_Y, w: 260, h: 300 } });
+    this.face.setOrigin(0.5).setPosition(W / 2, CHAR_Y);
+    this.baseS = this.face.base.s;
     this.trail.startFollow(this.face, 0, 60);
 
     // 表示
-    this.counterText = txt(this, 0, 0, '0 km', 76, { title: true, color: '#ffd23f', stroke: '#1b1300', strokeThickness: 12 });
+    this.counterText = txt(this, 0, 0, '0 km', 76, { title: true, color: '#ffffff', stroke: '#1b1300', strokeThickness: 12 });
     this.counter = this.add.container(W / 2, 110, [this.counterText]).setDepth(50);
     this.lyText = txt(this, W / 2, 185, '', 28, { color: '#ffffff', stroke: '#000000', strokeThickness: 6 }).setDepth(50);
     this.banner = null;
@@ -221,6 +237,7 @@ export default class FlightScene extends Phaser.Scene {
     }
 
     this.updateMarks(t);
+    this.updateRainbow(t, dt, speed, L, dL);
 
     if (t >= 7 && !this.landed) this.land();
     if (t >= DURATION && !this.done) {
@@ -268,6 +285,55 @@ export default class FlightScene extends Phaser.Scene {
     return img;
   }
 
+  updateRainbow(t, dt, speed, L, dL) {
+    const g = this.rainbowGain;
+    const cyc = t * (settings.reduceFlash ? 0.15 : 0.5);
+    // 距離表示を虹色に
+    this.counterText.setTint(hue(cyc), hue(cyc + 0.15), hue(cyc + 0.3), hue(cyc + 0.45));
+    // 虹のアーチ（1.6〜3秒で通過）
+    if (t > 1.6 && t < 3.2) this.arc.y = -300 + ((t - 1.6) / 1.4) * (H + 600);
+    else this.arc.setVisible(t <= 1.6);
+    // オーロラ：宇宙に出て速いほど濃く
+    const a = this.landed ? 0.06 : Phaser.Math.Clamp((L - 1.6) * 0.1, 0, 0.12) + Math.min(0.14, dL * 0.03);
+    this.aurora.setAlpha(a * g);
+    this.aurora.tilePositionY -= speed * dt * 0.15;
+    // 虹の帯
+    if (!this.landed) this.hist.unshift({ x: this.face.x, y: this.face.y });
+    const fall = this.landed ? 0 : Math.min(900, speed * 0.6) * dt;
+    for (const p of this.hist) p.y += fall;
+    while (this.hist.length > 28 || (this.hist.length && this.hist[this.hist.length - 1].y > H + 60)) this.hist.pop();
+    if (this.landed) this.hist.length = Math.max(0, this.hist.length - 2);
+    const r = this.ribbon.clear();
+    if (this.hist.length < 2) return;
+    const bw = 11;
+    RAINBOW.forEach((col, i) => {
+      const off = (i - 3) * bw;
+      for (let j = 0; j < this.hist.length - 1; j++) {
+        const p0 = this.hist[j];
+        const p1 = this.hist[j + 1];
+        const w0 = Math.sin(t * 14 - j * 0.45) * 10;
+        const w1 = Math.sin(t * 14 - (j + 1) * 0.45) * 10;
+        r.lineStyle(bw + 1, col, (1 - j / this.hist.length) * 0.95);
+        r.lineBetween(p0.x + off + w0, p0.y + 30, p1.x + off + w1, p1.y + 30);
+      }
+    });
+    // 最高速の瞬間に「RAINBOW RUSH!!」
+    if (!this.rushShown && t > 4.25 && t < 6.5) {
+      this.rushShown = true;
+      const rt = popText(this, W / 2, 470, 'RAINBOW RUSH!!', 80, { color: '#ffffff', stroke: '#1b1300', strokeThickness: 14, hold: 700, depth: 70 });
+      rt.setTint(RAINBOW[0], RAINBOW[2], RAINBOW[4], RAINBOW[6]).setAngle(-6);
+      this.rainbowRings(this.face.x, this.face.y);
+      sfx.combo(5);
+    }
+  }
+
+  rainbowRings(x, y) {
+    const n = settings.reduceFlash ? 3 : RAINBOW.length;
+    for (let i = 0; i < n; i++) {
+      this.time.delayedCall(i * 45, () => shockwave(this, x, y, { color: RAINBOW[(i * 7) / n | 0], scale: 4 + i * 0.5, duration: 520, depth: 40 }));
+    }
+  }
+
   setCounter(km) {
     const t = this.counterText.setText(formatKm(km));
     t.setScale(1);
@@ -278,7 +344,10 @@ export default class FlightScene extends Phaser.Scene {
     sfx.pass();
     shake(this, 90, 0.004);
     this.banner?.destroy();
-    const b = txt(this, -400, 300, msg, 38, { title: true, color: '#ffffff', backgroundColor: '#e63946', padding: { x: 22, y: 12 } }).setDepth(60).setAngle(-3);
+    this.passCount = (this.passCount || 0) + 1;
+    const bg = '#' + RAINBOW[this.passCount % RAINBOW.length].toString(16).padStart(6, '0');
+    const b = txt(this, -400, 300, msg, 38, { title: true, color: '#ffffff', stroke: '#1b1300', strokeThickness: 8, backgroundColor: bg, padding: { x: 22, y: 12 } }).setDepth(60).setAngle(-3);
+    this.rainbowRings(this.face.x, this.face.y);
     this.banner = b;
     this.tweens.add({ targets: b, x: W / 2, duration: 160, ease: 'Back.Out' });
     this.tweens.add({ targets: b, alpha: 0, delay: 650, duration: 200, onComplete: () => b.destroy() });
@@ -295,7 +364,7 @@ export default class FlightScene extends Phaser.Scene {
     this.setCounter(this.fin);
     this.lyText.setText(formatLightYears(this.fin) || '');
     this.tweens.add({ targets: this.counter, scale: { from: 1.7, to: 1 }, duration: 350, ease: 'Back.Out' });
-    this.tweens.add({ targets: this.face, angle: 0, scaleX: 0.7, scaleY: 0.45, duration: 120, yoyo: true, ease: 'Quad.Out' });
+    this.tweens.add({ targets: this.face, angle: 0, scaleX: this.baseS * 1.3, scaleY: this.baseS * 0.8, duration: 120, yoyo: true, ease: 'Quad.Out' });
     this.tweens.add({ targets: this.face, x: W / 2, duration: 200 });
     burst(this, W / 2, CHAR_Y, { count: 40, tint: [0xffd23f, 0xffffff], speed: [200, 700], life: 700 });
     // ピヨピヨ
@@ -308,7 +377,7 @@ export default class FlightScene extends Phaser.Scene {
       onUpdate: (tw) => {
         stars.forEach((s, i) => {
           const a = tw.getValue() * Math.PI * 2 + (i * Math.PI * 2) / 3;
-          s.setPosition(this.face.x + Math.cos(a) * 110, this.face.y - 110 + Math.sin(a) * 30);
+          s.setPosition(this.face.x + Math.cos(a) * 110, this.face.y - this.face.displayHeight * 0.5 + Math.sin(a) * 30);
         });
       },
     });

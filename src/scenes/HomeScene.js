@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { W, H, C, txt, button, background, go, fadeIn, burst, shake } from '../ui.js';
-import { PRESETS, faceKey, lastCharacterId, setLastCharacterId } from '../characters.js';
+import { PRESETS, addChar, lastCharacterId, setLastCharacterId } from '../characters.js';
 import { getRecords } from '../storage/records.js';
 import { formatKm } from '../core/format.js';
 import { sfx, bgmPlay } from '../audio/sfx.js';
@@ -17,9 +17,13 @@ export default class HomeScene extends Phaser.Scene {
     // タイトル周りの爆発と、殴られ続けるアイツ
     const boom = this.add.image(W / 2, 400, 'boom').setScale(1.25).setAlpha(0.9);
     this.tweens.add({ targets: boom, angle: 360, duration: 30000, repeat: -1 });
-    const victim = PRESETS[Math.floor(Math.random() * PRESETS.length)];
-    const face = this.add.image(W / 2 + 40, 420, faceKey(victim.id)).setScale(0.78);
-    const glove = this.add.image(W / 2 - 250, 520, 'glove').setScale(0.95).setAngle(60);
+    const victim = Math.random() < 0.6 ? PRESETS[0] : PRESETS[Math.floor(Math.random() * PRESETS.length)];
+    const face = addChar(this, victim.id, { box: { x: W / 2 + 50, y: 420, w: 420, h: 520 } });
+    const F = face.base;
+    const gHome = { x: F.x - 230, y: F.y + 110 };
+    const glove = this.add.image(gHome.x, gHome.y, 'glove').setScale(0.85).setAngle(60);
+    // 挑発のゆらゆら
+    this.tweens.add({ targets: face, angle: { from: -3, to: 3 }, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.InOut' });
 
     const t1 = txt(this, W / 2, 170, 'ぶっ飛ばせ！', 92, { title: true, color: '#ffd23f', stroke: '#c1121f', strokeThickness: 16, shadow: true }).setAngle(-6);
     const t2 = txt(this, W / 2 + 10, 660, 'ムカつくアイツ！', 84, { title: true, color: '#ffffff', stroke: '#c1121f', strokeThickness: 16, shadow: true }).setAngle(-6);
@@ -28,14 +32,14 @@ export default class HomeScene extends Phaser.Scene {
     const punchLoop = () => {
       this.tweens.add({
         targets: glove,
-        x: W / 2 - 110,
-        y: 470,
+        x: F.x - 70,
+        y: F.y + 30,
         duration: 110,
         ease: 'Quad.In',
         onComplete: () => {
-          burst(this, W / 2 - 60, 440, { count: 14, tint: [0xffd23f, 0xffffff], speed: [150, 450] });
-          this.tweens.add({ targets: face, scaleX: 0.9, scaleY: 0.66, angle: 12, x: W / 2 + 70, duration: 70, yoyo: true });
-          this.tweens.add({ targets: glove, x: W / 2 - 250, y: 520, duration: 380, ease: 'Quad.Out' });
+          burst(this, F.x - 30, F.y, { count: 14, tint: [0xffd23f, 0xffffff], speed: [150, 450] });
+          this.tweens.add({ targets: face, scaleX: F.s * 1.12, scaleY: F.s * 0.86, x: F.x + 30, duration: 70, yoyo: true });
+          this.tweens.add({ targets: glove, x: gHome.x, y: gHome.y, duration: 380, ease: 'Quad.Out' });
         },
       });
     };

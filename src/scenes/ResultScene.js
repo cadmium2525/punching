@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { W, H, C, txt, button, background, go, fadeIn, burst, popText, shake, panel, flash } from '../ui.js';
-import { faceKey, getCharacter } from '../characters.js';
+import { addChar } from '../characters.js';
 import { sfx, bgmPlay } from '../audio/sfx.js';
 import { formatKm, formatLightYears, formatPower } from '../core/format.js';
 import { titleFor } from '../core/stages.js';
@@ -45,7 +45,7 @@ export default class ResultScene extends Phaser.Scene {
     const title = titleFor(state.finalDistanceKm, state.godPunch);
     txt(this, W / 2, 425, `称号：${title}`, 32, { color: '#1b1300', backgroundColor: state.godPunch ? '#ffd23f' : '#7ee8ff', padding: { x: 20, y: 8 } });
 
-    const face = this.add.image(W / 2, 555, faceKey(state.characterId)).setScale(0.38).setAngle(-15);
+    const face = addChar(this, state.characterId, { box: { x: W / 2, y: 552, w: 220, h: 160 } }).setAngle(-15);
     this.tweens.add({ targets: face, angle: 15, yoyo: true, repeat: -1, duration: 700, ease: 'Sine.InOut' });
     const st = this.add.image(W / 2 + 70, 480, 'star').setScale(0.5).setTint(0xffd23f);
     this.tweens.add({ targets: st, angle: 360, repeat: -1, duration: 1200 });

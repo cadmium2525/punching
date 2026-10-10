@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { W, H, C, txt } from '../ui.js';
 import { makeTextures } from '../textures.js';
-import { PRESETS, buildFaceTexture, faceKey, loadCustomCharacters } from '../characters.js';
+import { PRESETS, buildCharTextures, loadCustomCharacters } from '../characters.js';
 import { ranking } from '../ranking/index.js';
 
 export default class BootScene extends Phaser.Scene {
@@ -17,7 +17,10 @@ export default class BootScene extends Phaser.Scene {
   }
   async create() {
     makeTextures(this);
-    PRESETS.forEach((c) => buildFaceTexture(this, faceKey(c.id), this.textures.get(`raw-${c.id}`).getSourceImage()));
+    PRESETS.forEach((c) => {
+      buildCharTextures(this, c.id, this.textures.get(`raw-${c.id}`).getSourceImage(), c.meta);
+      this.textures.remove(`raw-${c.id}`);
+    });
     await loadCustomCharacters(this);
     ranking.init().catch((e) => console.warn('ranking init failed', e));
     this.scene.start('Home');

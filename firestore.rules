@@ -37,7 +37,7 @@ service cloud.firestore {
         && d.grades is list && d.grades.size() == 5
         && isGrade(d.grades[0]) && isGrade(d.grades[1]) && isGrade(d.grades[2]) && isGrade(d.grades[3]) && isGrade(d.grades[4])
         && d.power is int && d.power == powerOf(d.grades)
-        && d.characterId is string && d.characterId.matches('^(preset-(0[1-9]|10)|custom)$')
+        && d.characterId is string && d.characterId.matches('^(preset-(0[1-9]|1[01])|custom)$')
         && d.achievedAt == request.time;
     }
     function bumpedRateLimit() {

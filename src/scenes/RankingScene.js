@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { W, H, C, txt, button, background, go, fadeIn, panel } from '../ui.js';
-import { faceKey } from '../characters.js';
+import { thumbKey } from '../characters.js';
 import { ranking } from '../ranking/index.js';
 import { formatKm } from '../core/format.js';
 
@@ -61,7 +61,7 @@ export default class RankingScene extends Phaser.Scene {
       const items = [
         bg,
         txt(this, 70, y, `${i + 1}`, 26, { title: true, color: rankCol }),
-        r.characterId?.startsWith('preset-') ? this.add.image(125, y, faceKey(r.characterId)).setScale(0.1) : txt(this, 125, y, '写', 18, { backgroundColor: '#3a4785', padding: { x: 6, y: 4 } }),
+        r.characterId?.startsWith('preset-') ? (this.textures.exists(thumbKey(r.characterId)) ? this.add.image(125, y, thumbKey(r.characterId)).setDisplaySize(36, 36) : txt(this, 125, y, '?', 18)) : txt(this, 125, y, '写', 18, { backgroundColor: '#3a4785', padding: { x: 6, y: 4 } }),
         txt(this, 160, y, r.nickname || '???', 24, { origin: [0, 0.5] }),
         txt(this, W - 50, y, formatKm(r.km), 24, { origin: [1, 0.5], color: '#ffd23f', title: true }),
       ];

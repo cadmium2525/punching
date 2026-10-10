@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
-const photo = fileURLToPath(new URL('../../public/assets/characters/character_08.png', import.meta.url));
+const photo = fileURLToPath(new URL('../../public/assets/characters/character_11.webp', import.meta.url));
 const shots = process.env.SHOTS_DIR;
 
 async function clickNamed(page, sceneKey, name) {
