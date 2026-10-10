@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:rules": "firebase emulators:exec --only firestore --project demo-punch \"vitest run --config vitest.rules.config.js\"",
-    "test:online": "vite build --mode emulator --outDir dist-emulator && firebase emulators:exec --only auth,firestore --project demo-punch \"playwright test -c playwright.online.config.js\""
+    "test:online": "vite build --mode emulator --outDir dist-emulator && firebase emulators:exec --only auth,firestore --project demo-punch \"playwright test -c playwright.online.config.js\"",
+    "pv": "node tools/record-pv.mjs pv-out && ffmpeg -y -framerate 30 -i pv-out/frames/%05d.jpg -i pv-out/audio.wav -vf \"scale=1080:1920:flags=lanczos,format=yuv420p\" -c:v libx264 -preset slow -crf 18 -af \"loudnorm=I=-14:TP=-1.5:LRA=11\" -c:a aac -b:a 192k -movflags +faststart -shortest pv-out/punch_pv.mp4"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.21",

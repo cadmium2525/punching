@@ -3,6 +3,7 @@ import { W, H, C, txt } from '../ui.js';
 import { makeTextures } from '../textures.js';
 import { PRESETS, buildCharTextures, loadCustomCharacters } from '../characters.js';
 import { ranking } from '../ranking/index.js';
+import { DEBUG } from '../debug.js';
 
 export default class BootScene extends Phaser.Scene {
   constructor() {
@@ -24,5 +25,6 @@ export default class BootScene extends Phaser.Scene {
     await loadCustomCharacters(this);
     ranking.init().catch((e) => console.warn('ranking init failed', e));
     this.scene.start('Home');
+    if (DEBUG.pv) this.scene.launch('PV');
   }
 }

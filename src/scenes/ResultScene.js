@@ -7,6 +7,7 @@ import { titleFor } from '../core/stages.js';
 import { addRecord } from '../storage/records.js';
 import { ranking } from '../ranking/index.js';
 import { askNickname } from '../ranking/nickname.js';
+import { DEBUG } from '../debug.js';
 
 export default class ResultScene extends Phaser.Scene {
   constructor() {
@@ -84,7 +85,7 @@ export default class ResultScene extends Phaser.Scene {
 
   async submit() {
     if (!ranking.online) {
-      this.rankText.setText('端末内の記録のみ');
+      this.rankText.setText(DEBUG.pv ? '' : '端末内の記録のみ');
       return;
     }
     if (!ranking.nickname) {

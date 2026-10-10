@@ -3,6 +3,7 @@ import { isFirebaseConfigured, firebaseConfig, recaptchaSiteKey, emulatorHost } 
 import { topLocal } from '../storage/records.js';
 import { distanceFromPower } from '../core/scoring.js';
 import { jstDay } from '../core/date.js';
+import { DEBUG } from '../debug.js';
 import { cleanNickname, isValidNickname } from './validate.js';
 
 class LocalRanking {
@@ -156,4 +157,6 @@ class FirebaseRanking {
   }
 }
 
-export const ranking = isFirebaseConfigured ? new FirebaseRanking() : new LocalRanking();
+// PV 書き出し中や自動テスト中は本番ランキングに触らない（エミュレーター接続時のみ使う）
+const useOnline = isFirebaseConfigured && !DEBUG.pv && (!DEBUG.test || Boolean(emulatorHost));
+export const ranking = useOnline ? new FirebaseRanking() : new LocalRanking();

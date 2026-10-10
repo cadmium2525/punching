@@ -12,6 +12,7 @@ import FlightScene from './scenes/FlightScene.js';
 import ResultScene from './scenes/ResultScene.js';
 import RankingScene from './scenes/RankingScene.js';
 import SettingsScene from './scenes/SettingsScene.js';
+import PVScene from './scenes/PVScene.js';
 
 async function waitFonts(timeout) {
   if (!document.fonts?.load) return;
@@ -35,7 +36,7 @@ async function start() {
     input: { activePointers: 4 },
     fps: { target: 60, smoothStep: false },
     render: { antialias: true, powerPreference: 'high-performance' },
-    scene: [BootScene, HomeScene, SelectScene, MiniGameScene, PunchScene, FlightScene, ResultScene, RankingScene, SettingsScene],
+    scene: [BootScene, HomeScene, SelectScene, MiniGameScene, PunchScene, FlightScene, ResultScene, RankingScene, SettingsScene, ...(DEBUG.pv ? [PVScene] : [])],
   });
   const unlock = () => {
     unlockAudio();
@@ -45,6 +46,7 @@ async function start() {
   window.addEventListener('keydown', unlock, { capture: true });
   document.getElementById('loading')?.classList.add('done');
   if (DEBUG.test) window.__pf = { game };
+  if (DEBUG.pv) window.__pv = { renderAudio: (await import('./audio/sfx.js')).renderPvAudio };
 }
 
 start();

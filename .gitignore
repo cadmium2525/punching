@@ -12,3 +12,4 @@ ui-debug.log
 .dev/
 dist-emulator/
 .firebaserc
+pv-out/
