@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { W, H, C, txt, go, fadeIn, burst, shake, flash, popText, shockwave } from '../ui.js';
 import { addChar } from '../characters.js';
-import { sfx, windStart, windSet, windStop } from '../audio/sfx.js';
+import { sfx, windStart, windSet, windStop, bgmPlay, bgmStop } from '../audio/sfx.js';
 import { formatKm, formatLightYears } from '../core/format.js';
 import { flightLogKm, flightKm, reachedLandmarks } from '../core/stages.js';
 import { DEBUG } from '../debug.js';
@@ -81,6 +81,7 @@ export default class FlightScene extends Phaser.Scene {
     this.lastTick = 0;
     fadeIn(this, 80);
     windStart();
+    bgmPlay('flight');
 
     this.bg = this.add.rectangle(W / 2, H / 2, W, H, bgColor(0));
 
@@ -189,7 +190,7 @@ export default class FlightScene extends Phaser.Scene {
     const km = flightKm(t, this.fin);
     this.setCounter(km);
     this.lyText.setText(formatLightYears(km) || '');
-    if (t > 0.5 && t < 7 && t - this.lastTick > 0.07) {
+    if (t > 0.5 && t < 7 && t - this.lastTick > 0.16) {
       this.lastTick = t;
       sfx.tick(Math.min(1, L / 18));
     }
@@ -246,6 +247,7 @@ export default class FlightScene extends Phaser.Scene {
     if (t >= DURATION && !this.done) {
       this.done = true;
       windStop();
+      bgmStop();
       go(this, 'Result', { state: this.state }, 120);
     }
   }

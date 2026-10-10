@@ -18,10 +18,16 @@ function vol(v) {
 /** ユーザー操作後に呼ぶ（iOS/Chrome の自動再生制限対策） */
 function initGraph(c) {
   ctx = c;
+  // コンプレッサー＋出力ゲインで音割れを防ぐ
   master = ctx.createDynamicsCompressor();
-  master.threshold.value = -10;
-  master.ratio.value = 6;
-  master.connect(ctx.destination);
+  master.threshold.value = -18;
+  master.knee.value = 6;
+  master.ratio.value = 12;
+  master.attack.value = 0.003;
+  master.release.value = 0.25;
+  const out = ctx.createGain();
+  out.gain.value = 0.8;
+  master.connect(out).connect(ctx.destination);
   sfxBus = ctx.createGain();
   bgmBus = ctx.createGain();
   sfxBus.connect(master);
@@ -59,7 +65,7 @@ function env(g, t, a, peak, d, sustain = 0.0001) {
   g.gain.exponentialRampToValueAtTime(sustain, t + a + d);
 }
 
-function osc(type, freq, t, dur, peak = 0.4, { to = null, bus = sfxBus, attack = 0.005, detune = 0 } = {}) {
+function osc(type, freq, t, dur, peak = 0.4, { to = null, bus = sfxBus, attack = 0.005, detune = 0, lp = 0 } = {}) {
   const o = ctx.createOscillator();
   const g = ctx.createGain();
   o.type = type;
@@ -67,7 +73,13 @@ function osc(type, freq, t, dur, peak = 0.4, { to = null, bus = sfxBus, attack =
   o.detune.value = detune;
   if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
   env(g, t, attack, peak, dur);
-  o.connect(g).connect(bus);
+  if (lp) {
+    // 角の立った波形を丸くする
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = lp;
+    o.connect(f).connect(g).connect(bus);
+  } else o.connect(g).connect(bus);
   o.start(t);
   o.stop(t + attack + dur + 0.05);
   return o;
@@ -145,7 +157,7 @@ export const sfx = {
   },
   tick(p = 0) {
     if (!ready()) return;
-    osc('square', 1200 + p * 1600, now(), 0.03, 0.05);
+    osc('sine', 900 + p * 900, now(), 0.04, 0.025);
   },
   beat() {
     if (!ready()) return;
@@ -238,11 +250,11 @@ function _windStart() {
   s.loop = true;
   const f = ctx.createBiquadFilter();
   f.type = 'bandpass';
-  f.frequency.value = 400;
-  f.Q.value = 0.8;
+  f.frequency.value = 300;
+  f.Q.value = 1.4;
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, now());
-  g.gain.exponentialRampToValueAtTime(0.35, now() + 0.3);
+  g.gain.exponentialRampToValueAtTime(0.08, now() + 0.3);
   s.connect(f).connect(g).connect(sfxBus);
   s.start();
   wind = { s, f, g };
@@ -250,8 +262,9 @@ function _windStart() {
 function _windSet(intensity) {
   if (!wind) return;
   const t = now();
-  wind.f.frequency.setTargetAtTime(300 + intensity * 2500, t, 0.05);
-  wind.g.gain.setTargetAtTime(0.05 + intensity * 0.35, t, 0.05);
+  // 風切り音は控えめに（主役は BGM）
+  wind.f.frequency.setTargetAtTime(250 + intensity * 900, t, 0.08);
+  wind.g.gain.setTargetAtTime(0.02 + intensity * 0.06, t, 0.08);
 }
 function _windStop() {
   if (!wind) return;
@@ -261,34 +274,48 @@ function _windStop() {
   w.s.stop(now() + 0.5);
 }
 
-// BGM：簡単なドラム＋ベースのループ。テンポとテンションを切り替えられる。
+// BGM：ドラム＋ベース＋メロディのループ。calm（メニュー）/ fight（ミニゲーム）/ flight（飛行中・明るく盛り上がる）
 const bgm = { on: false, mode: 'calm', step: 0, next: 0, timer: null };
 const BASS = { calm: ['A2', 'A2', 'C3', 'A2', 'F2', 'F2', 'G2', 'E2'], fight: ['E2', 'E2', 'G2', 'E2', 'A2', 'A2', 'B2', 'D3'] };
 const LEAD = { calm: ['E5', null, 'A5', null, 'C6', null, 'B5', 'G5'], fight: ['E5', 'G5', 'B5', 'E6', 'D6', 'B5', 'A5', 'G5'] };
+// 飛行中：C → G → Am → F の明るい進行をアルペジオで
+const FLIGHT = [
+  { bass: 'C3', arp: ['C5', 'E5', 'G5', 'C6'] },
+  { bass: 'G2', arp: ['B4', 'D5', 'G5', 'B5'] },
+  { bass: 'A2', arp: ['C5', 'E5', 'A5', 'C6'] },
+  { bass: 'F2', arp: ['C5', 'F5', 'A5', 'C6'] },
+];
+const BPM = { calm: 120, fight: 150, flight: 160 };
 
 function scheduleStep(t, i) {
-  const fight = bgm.mode === 'fight';
+  const mode = bgm.mode;
   const s = i % 16;
-  if (s % 4 === 0) {
-    osc('sine', 120, t, 0.18, 0.7, { to: 40, bus: bgmBus });
+  if (s % 4 === 0) osc('sine', 120, t, 0.18, 0.7, { to: 40, bus: bgmBus });
+  if (mode === 'flight') {
+    const ch = FLIGHT[Math.floor(i / 16) % 4];
+    if (s === 0) for (const n of ch.arp.slice(0, 3)) osc('sawtooth', hz(n) / 2, t, 1.4, 0.032, { bus: bgmBus, attack: 0.08, lp: 1400 });
+    if (s % 2 === 0) osc('triangle', hz(ch.bass), t, 0.18, 0.2, { bus: bgmBus, lp: 600 });
+    osc('triangle', hz(ch.arp[s % 4]) * (s >= 8 ? 2 : 1), t, 0.12, 0.11, { bus: bgmBus, lp: 5000 });
+    if (s % 8 === 4) noise(t, 0.08, 0.05, { type: 'bandpass', freq: 2000, q: 1, bus: bgmBus });
+    return;
   }
-  if (fight && s % 8 === 4) noise(t, 0.15, 0.35, { type: 'bandpass', freq: 1800, q: 0.8, bus: bgmBus });
-  if (!fight && s % 8 === 4) noise(t, 0.1, 0.18, { type: 'bandpass', freq: 1800, q: 0.8, bus: bgmBus });
-  noise(t, 0.03, s % 2 ? 0.06 : 0.1, { type: 'highpass', freq: 7000, bus: bgmBus });
+  const fight = mode === 'fight';
+  if (s % 8 === 4) noise(t, fight ? 0.12 : 0.09, fight ? 0.15 : 0.08, { type: 'bandpass', freq: 1800, q: 1, bus: bgmBus });
+  if (s % 2 === 0) noise(t, 0.02, fight ? 0.03 : 0.02, { type: 'highpass', freq: 9000, bus: bgmBus });
   if (s % 2 === 0) {
-    const n = BASS[bgm.mode][Math.floor(i / 2) % 8];
-    osc('sawtooth', hz(n), t, 0.16, 0.16, { bus: bgmBus });
+    const n = BASS[mode][Math.floor(i / 2) % 8];
+    osc('sawtooth', hz(n), t, 0.16, 0.16, { bus: bgmBus, lp: 900 });
   }
   const bar = Math.floor(i / 16) % 4;
   if (s % 2 === 0 && (fight || bar % 2 === 1)) {
-    const n = LEAD[bgm.mode][(s / 2) % 8];
-    if (n) osc('square', hz(n), t, 0.1, 0.045, { bus: bgmBus });
+    const n = LEAD[mode][(s / 2) % 8];
+    if (n) osc('square', hz(n), t, 0.1, 0.04, { bus: bgmBus, lp: 3000 });
   }
 }
 
 function pump() {
   if (!bgm.on || !ready()) return;
-  const spb = 60 / (bgm.mode === 'fight' ? 150 : 120) / 4;
+  const spb = 60 / (BPM[bgm.mode] || 120) / 4;
   while (bgm.next < now() + 0.12) {
     scheduleStep(bgm.next, bgm.step++);
     bgm.next += spb;
@@ -390,7 +417,7 @@ export async function renderPvAudio(fromMs, durSec) {
 }
 
 function spbOf(mode) {
-  return 60 / (mode === 'fight' ? 150 : 120) / 4;
+  return 60 / (BPM[mode] || 120) / 4;
 }
 
 function wavBase64(buf) {
